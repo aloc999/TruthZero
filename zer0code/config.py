@@ -34,6 +34,8 @@ class ZeroCodeConfig:
             return os.environ.get("OPENAI_API_KEY")
         elif self.provider == "anthropic":
             return os.environ.get("ANTHROPIC_API_KEY")
+        elif self.provider == "deepseek":
+            return os.environ.get("DEEPSEEK_API_KEY")
         return None
 
     @classmethod
@@ -71,6 +73,9 @@ class ZeroCodeConfig:
         elif self.provider == "anthropic":
             base["api_key"] = os.environ.get("ANTHROPIC_API_KEY", "")
             base["base_url"] = "https://api.anthropic.com"
+        elif self.provider == "deepseek":
+            base["api_key"] = os.environ.get("DEEPSEEK_API_KEY", "")
+            base["base_url"] = "https://api.deepseek.com/v1"
         elif self.provider == "ollama":
             base["base_url"] = self.ollama_base_url
             base["api_key"] = "ollama"

@@ -24,7 +24,7 @@ ZER0CODE is a terminal-based AI coding agent purpose-built for offensive securit
 
 ### Agentic AI Core
 - **Autonomous tool execution** — agent plans, executes tools, observes results, and iterates
-- **Multi-provider LLM support** — OpenAI, Anthropic, Ollama (local models)
+- **Multi-provider LLM support** — OpenAI, Anthropic, DeepSeek, Ollama (local models)
 - **Streaming responses** with real-time rendering
 - **Conversation context** with intelligent management
 
@@ -103,6 +103,9 @@ export OPENAI_API_KEY="sk-..."
 # Anthropic
 export ANTHROPIC_API_KEY="sk-ant-..."
 
+# DeepSeek
+export DEEPSEEK_API_KEY="sk-..."
+
 # Or use Ollama (no key needed)
 # Just have Ollama running: ollama serve
 ```
@@ -164,6 +167,7 @@ Config file: `~/.zer0code/config.json`
 |----------|--------|-------|
 | `openai` | gpt-4o, gpt-4o-mini, o1, o3 | Requires OPENAI_API_KEY |
 | `anthropic` | claude-sonnet-4-20250514, claude-opus-4-20250514 | Requires ANTHROPIC_API_KEY |
+| `deepseek` | deepseek-chat, deepseek-reasoner | Requires DEEPSEEK_API_KEY |
 | `ollama` | qwen2.5-coder, llama3.1, deepseek-coder-v2 | Local, no API key needed |
 
 ---
