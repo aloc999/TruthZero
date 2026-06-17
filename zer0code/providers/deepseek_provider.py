@@ -18,7 +18,7 @@ class DeepSeekProvider(OpenAIProvider):
 
     @property
     def available_models(self) -> list[str]:
-        return ["deepseek-chat", "deepseek-reasoner"]
+        return ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"]
 
     def __init__(self, model: str = "", api_key: str = "", base_url: str = ""):
         super().__init__(model, api_key, base_url)

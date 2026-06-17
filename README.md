@@ -167,7 +167,7 @@ Config file: `~/.zer0code/config.json`
 |----------|--------|-------|
 | `openai` | gpt-4o, gpt-4o-mini, o1, o3 | Requires OPENAI_API_KEY |
 | `anthropic` | claude-sonnet-4-20250514, claude-opus-4-20250514 | Requires ANTHROPIC_API_KEY |
-| `deepseek` | deepseek-chat, deepseek-reasoner | Requires DEEPSEEK_API_KEY |
+| `deepseek` | deepseek-chat, deepseek-reasoner, deepseek-v4-pro | Requires DEEPSEEK_API_KEY |
 | `ollama` | qwen2.5-coder, llama3.1, deepseek-coder-v2 | Local, no API key needed |
 
 ---
