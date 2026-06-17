@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 import os
 
@@ -18,6 +18,15 @@ class SecurityToolsConfig:
 
 
 @dataclass
+class MCPServerEntry:
+    name: str = ""
+    command: str = ""
+    args: List[str] = field(default_factory=list)
+    env: Dict[str, str] = field(default_factory=dict)
+    enabled: bool = True
+
+
+@dataclass
 class ZeroCodeConfig:
     provider: str = "openai"
     model: str = "gpt-4o"
@@ -27,6 +36,10 @@ class ZeroCodeConfig:
     max_context_tokens: int = 128000
     security_tools: SecurityToolsConfig = field(default_factory=SecurityToolsConfig)
     theme: str = "hacker"
+    auto_approve_tools: bool = False
+    auto_lint: bool = True
+    mcp_servers: List[Dict] = field(default_factory=list)
+    session_auto_save: bool = True
 
     @property
     def api_key(self) -> Optional[str]:
@@ -50,8 +63,9 @@ class ZeroCodeConfig:
 
         security_tools_data = data.pop("security_tools", {})
         security_tools = SecurityToolsConfig(**security_tools_data)
+        mcp_servers = data.pop("mcp_servers", [])
 
-        config = cls(security_tools=security_tools, **data)
+        config = cls(security_tools=security_tools, mcp_servers=mcp_servers, **data)
         return config
 
     def save(self) -> None:
@@ -61,7 +75,7 @@ class ZeroCodeConfig:
             json.dump(data, f, indent=2)
 
     def get_provider_config(self) -> Dict[str, Any]:
-        base = {
+        base: Dict[str, Any] = {
             "provider": self.provider,
             "model": self.model,
             "max_context_tokens": self.max_context_tokens,

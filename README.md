@@ -18,7 +18,27 @@
 
 ---
 
-ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of modern AI coding tools with a complete penetration testing toolkit, adaptive memory that learns from past mistakes, and multi-provider LLM support.
+ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of Claude Code, the adaptive learning of Hermes Agent, and a complete penetration testing toolkit — all in one tool.
+
+## What's New in v0.2.0
+
+- MCP (Model Context Protocol) support
+- Git tools (status, diff, commit, log, branch)
+- Session persistence — save/resume conversations
+- Context compaction — automatic context window management
+- Permission system — confirms before dangerous actions
+- Loop detection — breaks out of repeated failing patterns
+- Cost/token tracking with real-time display
+- Project context files (.zer0code.md, AGENTS.md)
+- Hooks system with auto-lint after code edits
+- Subagent system for parallel task spawning
+- Diff display when editing files
+- TF-IDF semantic memory search
+- Episodic memory + adaptive strategy selection
+- Meta-cognitive confidence assessment
+- DeepSeek LLM provider (V3, R1, V4 Pro)
+
+---
 
 ## Features
 
@@ -26,58 +46,81 @@ ZER0CODE is a terminal-based AI coding agent purpose-built for offensive securit
 - **Autonomous tool execution** — agent plans, executes tools, observes results, and iterates
 - **Multi-provider LLM support** — OpenAI, Anthropic, DeepSeek, Ollama (local models)
 - **Streaming responses** with real-time rendering
-- **Conversation context** with intelligent management
+- **Parallel tool execution** — runs independent tools concurrently
+- **Loop detection** — detects and breaks repetitive patterns automatically
+- **Context compaction** — summarizes old messages when context fills up (`/compact`)
+- **Permission system** — confirms before high-risk actions (bash, port scan, nuclei, etc.)
+- **Cost tracking** — real-time token and dollar tracking per model
 
 ### Learn from Mistakes (Hermes-style Memory)
+- **TF-IDF semantic search** — finds relevant memories using term frequency, not just keywords
 - **Mistake tracking** — records errors, extracts lessons, avoids repeating failures
 - **Success patterns** — remembers what worked for future reference
-- **Tool patterns** — learns optimal tool usage over time
-- **Knowledge base** — accumulates security knowledge across sessions
-- **Reflection engine** — periodically analyzes behavior and extracts insights
+- **Episodic memory** — full episode replay with tool call sequences
+- **Adaptive strategy selection** — picks different approaches based on what worked before
+- **Memory decay** — old irrelevant memories fade, recent ones stay prominent
+- **Auto-reflection triggers** — reflects after 3 consecutive tool failures or 5 total session failures
+- **Meta-cognitive confidence assessment** — self-evaluates whether it's making progress or stuck
+- **Cross-project learning** — applies lessons from one project to another
+- **Loop detection** — detects when stuck in a cycle and forces strategy change
 
-### Penetration Testing Toolkit (13 Built-in Security Tools)
+### MCP (Model Context Protocol)
+- Connect to any MCP server via stdio transport
+- Register external tools dynamically
+- Configure servers in `~/.zer0code/config.json`
+
+### Session Persistence
+- Auto-save conversations to SQLite
+- Resume any previous session with `--resume <id>`
+- List, load, title, and delete sessions
+- Full message history including tool calls
+
+### Project Context
+- Auto-detects project root (git, config files)
+- Loads `.zer0code.md` or `AGENTS.md` for project-specific instructions
+- Detects tech stack (Python, Node, Rust, Go, Java, Docker, etc.)
+- Injects project context into system prompt
+
+### Penetration Testing Toolkit (25 Built-in Tools)
 
 | Category | Tools |
 |----------|-------|
+| **Core** | Bash, Read File, Write File, Edit File, Glob, Grep, Web Fetch |
+| **Git** | Status, Diff, Commit, Log, Branch |
 | **Recon** | Subdomain Enumeration, Port Scanning, DNS Lookup, WHOIS |
 | **Scanning** | Nuclei Integration, Directory Fuzzing, Tech Detection |
 | **Exploitation** | Exploit Search (NVD/ExploitDB), Payload Generator, Reverse Shell Generator |
 | **Crypto** | Hash Identification, Hash Cracking, Encoder/Decoder |
 
-### Core Development Tools
-- **Bash** — execute any shell command
-- **File Operations** — read, write, edit, glob, grep
-- **Web Fetch** — retrieve and parse web content
-
-### Terminal UI
-- Clean, Claude Code-inspired interface
+### Terminal UI (Claude Code-inspired)
+- Clean, minimal interface with rich markdown rendering
 - 3 themes: `hacker` (green-on-black), `dark` (modern), `minimal`
-- Rich markdown rendering with syntax highlighting
-- Tool execution panels with spinners
-- Status bar with token tracking
+- Tool execution panels with spinners and syntax highlighting
+- Diff display when editing files
+- Status bar with model, tokens, cost, and memory count
+- Permission confirmation dialogs for dangerous actions
+
+### Hooks & Auto-Lint
+- Pre/post tool execution hooks
+- Auto-lint after file writes (ruff, eslint, gofmt, cargo clippy)
+- Extensible hook system
 
 ### 15 Built-in Pentesting Skills
-Web Recon • API Testing • XSS Hunter • SQLi Master • SSRF Exploit • Auth Bypass • Linux PrivEsc • Windows PrivEsc • AD Attack • Cloud Pentest • Mobile Pentest • Network Pentest • Reverse Engineering • Malware Analysis • OSINT
+Web Recon, API Testing, XSS Hunter, SQLi Master, SSRF Exploit, Auth Bypass, Linux PrivEsc, Windows PrivEsc, AD Attack, Cloud Pentest, Mobile Pentest, Network Pentest, Reverse Engineering, Malware Analysis, OSINT
 
 ---
 
 ## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/aloc999/zer0code.git
 cd zer0code
-
-# Install
 pip install -e .
-
-# Or with dev dependencies
-pip install -e ".[dev]"
 ```
 
 ### Requirements
 - Python 3.10+
-- An LLM API key (OpenAI, Anthropic) or Ollama running locally
+- An LLM API key (OpenAI, Anthropic, DeepSeek) or Ollama running locally
 
 ### Optional (for full pentesting capability)
 ```bash
@@ -95,50 +138,44 @@ apt install exploitdb hashcat john
 
 ## Quick Start
 
-### Set your API key
 ```bash
-# OpenAI
-export OPENAI_API_KEY="sk-..."
+# Set API key
+export OPENAI_API_KEY="sk-..."       # OpenAI
+export ANTHROPIC_API_KEY="sk-ant-..."  # Anthropic
+export DEEPSEEK_API_KEY="sk-..."       # DeepSeek
 
-# Anthropic
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# DeepSeek
-export DEEPSEEK_API_KEY="sk-..."
-
-# Or use Ollama (no key needed)
-# Just have Ollama running: ollama serve
-```
-
-### Launch ZER0CODE
-```bash
 # Interactive mode
 zer0code
 
-# Short alias
-z0
+# With specific provider/model
+zer0code -p deepseek -m deepseek-v4-pro
 
 # Single prompt
 zer0code run "scan target.com for open ports"
 
-# Show config
-zer0code config
+# Resume a session
+zer0code --resume abc123
 
-# Show learned memories
-zer0code memory
+# List past sessions
+zer0code sessions
 ```
 
 ### Interactive Commands
 ```
-/help       — Show all commands
-/tools      — List available tools
-/clear      — Clear conversation
-/memory     — View learned memories
-/config     — Show configuration
-/model      — Switch model
-/provider   — Switch provider
-/skill      — Load a pentesting skill
-/exit       — Exit ZER0CODE
+/help       Show all commands
+/tools      List available tools (with risk levels)
+/clear      Clear conversation history
+/memory     View learned memories and stats
+/config     Show current configuration
+/model      Switch model (/model deepseek-v4-pro)
+/provider   Switch provider (/provider deepseek)
+/theme      Switch theme (/theme dark)
+/skill      Load a pentesting skill (/skill xss-hunter)
+/session    Manage sessions (list/load/title)
+/compact    Compact conversation context
+/cost       Show token usage and cost
+/status     Show status bar
+/exit       Exit ZER0CODE
 ```
 
 ---
@@ -149,15 +186,28 @@ Config file: `~/.zer0code/config.json`
 
 ```json
 {
-  "provider": "openai",
-  "model": "gpt-4o",
+  "provider": "deepseek",
+  "model": "deepseek-v4-pro",
   "theme": "hacker",
   "memory_enabled": true,
+  "auto_approve_tools": false,
+  "auto_lint": true,
+  "session_auto_save": true,
   "max_context_tokens": 128000,
-  "security": {
-    "proxy": null,
-    "wordlists_path": "/usr/share/wordlists"
-  }
+  "security_tools": {
+    "wordlists_path": "/usr/share/wordlists",
+    "proxy_host": "127.0.0.1",
+    "proxy_port": 8080,
+    "use_proxy": false
+  },
+  "mcp_servers": [
+    {
+      "name": "filesystem",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "enabled": true
+    }
+  ]
 }
 ```
 
@@ -165,10 +215,34 @@ Config file: `~/.zer0code/config.json`
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| `openai` | gpt-4o, gpt-4o-mini, o1, o3 | Requires OPENAI_API_KEY |
+| `openai` | gpt-4o, gpt-4o-mini, o3-mini | Requires OPENAI_API_KEY |
 | `anthropic` | claude-sonnet-4-20250514, claude-opus-4-20250514 | Requires ANTHROPIC_API_KEY |
 | `deepseek` | deepseek-chat, deepseek-reasoner, deepseek-v4-pro | Requires DEEPSEEK_API_KEY |
 | `ollama` | qwen2.5-coder, llama3.1, deepseek-coder-v2 | Local, no API key needed |
+
+---
+
+## Project Context
+
+Create a `.zer0code.md` file in your project root:
+
+```markdown
+# Project Instructions
+
+This is a Django REST API with PostgreSQL.
+Always use pytest for testing.
+Run `make lint` after code changes.
+Security focus: check for SQLi in ORM queries.
+```
+
+ZER0CODE auto-loads this and follows the instructions.
+
+Supported context files (checked in order):
+- `.zer0code.md`
+- `.zer0code`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `.github/copilot-instructions.md`
 
 ---
 
@@ -176,79 +250,84 @@ Config file: `~/.zer0code/config.json`
 
 ```
 zer0code/
-├── agent.py              # Core agentic loop
-├── cli.py                # CLI interface (click + prompt_toolkit)
-├── config.py             # Configuration management
+├── agent.py              # Core agentic loop (parallel tools, loop detection, compaction)
+├── cli.py                # CLI interface (click + prompt_toolkit + TerminalUI)
+├── config.py             # Configuration with MCP server support
+├── cost.py               # Token/cost tracking per provider
+├── context.py            # Project context + context compaction
+├── hooks.py              # Hook system + auto-lint
+├── permissions.py        # Permission/risk management
+├── session.py            # Session persistence (SQLite)
+├── subagent.py           # Parallel subagent spawning
 ├── providers/            # LLM provider integrations
 │   ├── openai_provider.py
 │   ├── anthropic_provider.py
+│   ├── deepseek_provider.py
 │   └── ollama_provider.py
-├── tools/                # Tool system
-│   ├── bash.py           # Shell execution
-│   ├── file_ops.py       # File operations
-│   ├── search.py         # Web fetching
+├── tools/                # Tool system (25 tools)
+│   ├── bash.py
+│   ├── file_ops.py
+│   ├── search.py
+│   ├── git.py            # Git integration
 │   └── security/         # Pentesting tools
-│       ├── recon.py      # Subdomain enum, port scan, DNS, WHOIS
-│       ├── scanner.py    # Nuclei, dir fuzz, tech detect
-│       ├── exploit.py    # Exploit search, payloads, reverse shells
-│       └── crypto.py     # Hash ID, cracking, encoding
-├── memory/               # Learning system
-│   ├── store.py          # SQLite memory store
-│   └── reflection.py     # Mistake analysis engine
+│       ├── recon.py
+│       ├── scanner.py
+│       ├── exploit.py
+│       └── crypto.py
+├── memory/               # Hermes-style learning system
+│   ├── store.py          # TF-IDF semantic search + episodic + strategies
+│   ├── reflection.py     # Auto-reflection + meta-cognition + strategy
+│   └── loop_detector.py  # Loop/stuck pattern detection
+├── mcp/                  # Model Context Protocol client
+│   └── client.py
 ├── ui/                   # Terminal UI
-│   ├── terminal.py       # Main UI controller
-│   ├── themes.py         # Color themes
-│   └── components.py     # UI components
+│   ├── terminal.py
+│   ├── themes.py
+│   ├── components.py
+│   └── diff.py           # Diff renderer
 └── skills/               # Pentesting skills
-    ├── pentesting.py     # Built-in skill definitions
-    └── loader.py         # Skill loading system
-```
-
----
-
-## Usage Examples
-
-### Web Application Recon
-```
-> Enumerate subdomains for target.com and scan for open ports
-```
-
-### Vulnerability Assessment
-```
-> Run nuclei scan on https://target.com with high severity templates
-```
-
-### Exploit Development
-```
-> Search for CVEs related to Apache 2.4.49 and generate exploit payloads
-```
-
-### Code Review
-```
-> Read the source code in ./src and identify SQL injection vulnerabilities
-```
-
-### Reverse Shell
-```
-> Generate a Python reverse shell for 10.10.14.5:4444
-```
-
-### Hash Cracking
-```
-> Identify this hash: 5f4dcc3b5aa765d61d8327deb882cf99 and try to crack it
+    ├── pentesting.py
+    └── loader.py
 ```
 
 ---
 
 ## Memory System
 
-ZER0CODE learns from every session:
+ZER0CODE learns from every session with 6 memory types:
 
-- **Mistakes** → "Last time nmap failed because the host was behind a WAF. Next time, use `--script http-waf-detect` first."
-- **Successes** → "ffuf with `-fc 403,404` and medium wordlist found `/api/v2/admin` on similar targets."
-- **Patterns** → "For Spring Boot apps, always check `/actuator/env` and `/actuator/heapdump`."
+| Type | Purpose |
+|------|---------|
+| **Mistakes** | Records failures and extracts lessons |
+| **Successes** | Remembers approaches that worked |
+| **Tool Patterns** | Learns optimal tool usage |
+| **Knowledge** | Accumulates security knowledge |
+| **Episodes** | Full tool-call sequence replay |
+| **Strategies** | Adaptive approach selection with success rates |
 
-Memories persist in `~/.zer0code/memory.db` and are automatically injected into context when relevant.
+Features:
+- **TF-IDF semantic search** — finds relevant memories by meaning, not just keywords
+- **Exponential decay** — old memories fade, recent ones stay relevant
+- **Auto-reflection** — triggers after consecutive failures
+- **Loop detection** — breaks out of repeated patterns
+- **Confidence assessment** — monitors if agent is making progress
+- **Cross-project** — learns transfer across projects
+
+---
+
+## Permission System
+
+Tools are categorized by risk level:
+
+| Risk | Tools | Behavior |
+|------|-------|----------|
+| **Low** | read, glob, grep, dns_lookup, whois | Auto-approved |
+| **Medium** | write, edit, commit, payload_gen, hash_crack | Contextual |
+| **High** | bash, port_scan, nuclei, dir_fuzz, reverse_shell | Requires confirmation |
+
+Dangerous command patterns (rm -rf, DROP TABLE, etc.) always require confirmation.
+
+Set `"auto_approve_tools": true` in config to skip confirmations.
 
 ---
 

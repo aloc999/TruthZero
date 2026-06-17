@@ -5,6 +5,10 @@ from zer0code.memory.store import MemoryStore
 class ReflectionEngine:
     def __init__(self, memory_store: MemoryStore):
         self.memory = memory_store
+        self.consecutive_failures: dict[str, int] = {}
+        self.session_failure_count: int = 0
+        self._message_count: int = 0
+        self._current_project: str = ""
         self._error_patterns = {
             "permission denied": "security_error",
             "not found": "tool_error",
@@ -25,6 +29,26 @@ class ReflectionEngine:
                 return category
         return "logic_error"
 
+    def should_trigger_reflection(self, tool_name: str, success: bool) -> bool:
+        self._message_count += 1
+
+        if success:
+            self.consecutive_failures[tool_name] = 0
+        else:
+            self.consecutive_failures[tool_name] = self.consecutive_failures.get(tool_name, 0) + 1
+            self.session_failure_count += 1
+
+        if self.consecutive_failures.get(tool_name, 0) >= 3:
+            return True
+
+        if self.session_failure_count >= 5:
+            return True
+
+        if self._message_count % 15 == 0:
+            return True
+
+        return False
+
     async def analyze_tool_failure(
         self, tool_name: str, args: dict, error: str, context: str
     ) -> str:
@@ -39,6 +63,17 @@ class ReflectionEngine:
         repeated = [m for m in similar if tool_name in m.get("lesson", "")]
 
         advice_parts = [f"WARNING: {tool_name} just failed: {error}"]
+
+        consec = self.consecutive_failures.get(tool_name, 0)
+        if consec >= 3:
+            advice_parts.append(
+                f"CRITICAL: {tool_name} has failed {consec} consecutive times. "
+                "STOP using this tool and try a completely different approach."
+            )
+            strategy = await self.suggest_strategy(context)
+            if strategy:
+                advice_parts.append(f"Suggested strategy: {strategy}")
+
         if len(repeated) > 1:
             advice_parts.append(
                 f"This tool has failed {len(repeated)} times in similar contexts."
@@ -52,6 +87,12 @@ class ReflectionEngine:
         if good_patterns:
             advice_parts.append(f"Known working pattern: {good_patterns[0]['pattern']}")
 
+        if self.session_failure_count >= 5:
+            advice_parts.append(
+                f"SESSION ALERT: {self.session_failure_count} total failures this session. "
+                "Consider re-evaluating the overall approach."
+            )
+
         return "\n".join(advice_parts)
 
     async def analyze_tool_success(
@@ -63,6 +104,8 @@ class ReflectionEngine:
 
         pattern = f"args={args} -> success"
         await self.memory.add_tool_pattern(tool_name, pattern, "")
+
+        self.consecutive_failures[tool_name] = 0
 
     async def analyze_conversation(self, messages: list[dict]) -> list[str]:
         lessons = []
@@ -78,7 +121,10 @@ class ReflectionEngine:
                 if pattern in content.lower():
                     error_counts[category] = error_counts.get(category, 0) + 1
 
-            tool_match = re.findall(r"(?:tool|command|function)\s+['\"]?(\w+)['\"]?\s+failed", content.lower())
+            tool_match = re.findall(
+                r"(?:tool|command|function)\s+['\"]?(\w+)['\"]?\s+failed",
+                content.lower(),
+            )
             for tool in tool_match:
                 tool_failures[tool] = tool_failures.get(tool, 0) + 1
 
@@ -97,6 +143,12 @@ class ReflectionEngine:
         if len(messages) > 20:
             lessons.append(
                 "Long conversation detected - consider breaking the task into smaller steps"
+            )
+
+        if self.detect_stuck_pattern(messages):
+            lessons.append(
+                "STUCK PATTERN DETECTED: Recent messages show repetitive behavior. "
+                "Change approach immediately."
             )
 
         return lessons
@@ -120,6 +172,10 @@ class ReflectionEngine:
             for s in successes:
                 parts.append(f"- {s['approach']} -> {s['outcome'][:200]}")
 
+        strategy = await self.suggest_strategy(current_context)
+        if strategy:
+            parts.append(f"RECOMMENDED STRATEGY: {strategy}")
+
         return "\n".join(parts)
 
     async def periodic_reflection(self, messages: list[dict]):
@@ -133,7 +189,7 @@ class ReflectionEngine:
                 category = "code"
 
             await self.memory.add_knowledge(
-                key=f"conversation_lesson",
+                key="conversation_lesson",
                 value=lesson,
                 source="periodic_reflection",
                 category=category,
@@ -154,3 +210,90 @@ class ReflectionEngine:
                     lesson=f"User correction after: {last_user[:300]}",
                     category="logic_error",
                 )
+
+    async def suggest_strategy(self, context: str) -> str:
+        best = await self.memory.get_best_strategy(context)
+        if best:
+            return (
+                f"{best['strategy']} "
+                f"(success rate: {best['success_rate']:.0%}, used {best['usage_count']} times)"
+            )
+        return ""
+
+    async def record_strategy_outcome(self, context: str, strategy: str, success: bool):
+        await self.memory.add_strategy(context, strategy)
+        async with self.memory._db.execute(
+            "SELECT id FROM strategies WHERE context_pattern = ? AND strategy = ? ORDER BY id DESC LIMIT 1",
+            (context, strategy),
+        ) as cursor:
+            row = await cursor.fetchone()
+        if row:
+            await self.memory.update_strategy_outcome(row["id"], success)
+
+    def assess_confidence(self, messages: list[dict]) -> str:
+        if not messages:
+            return "UNKNOWN: no messages to analyze"
+
+        recent = messages[-10:] if len(messages) > 10 else messages
+
+        error_count = 0
+        success_indicators = 0
+
+        for msg in recent:
+            content = msg.get("content", "")
+            if not isinstance(content, str):
+                continue
+            lowered = content.lower()
+            for pattern in self._error_patterns:
+                if pattern in lowered:
+                    error_count += 1
+            if any(
+                w in lowered
+                for w in ["success", "completed", "done", "works", "fixed"]
+            ):
+                success_indicators += 1
+
+        if self.detect_stuck_pattern(messages):
+            return "LOW: repeating same approach, consider pivot"
+
+        if error_count > len(recent) * 0.5:
+            return "LOW: high error rate in recent messages"
+
+        if success_indicators >= 2 and error_count <= 1:
+            return "HIGH: making steady progress"
+
+        if error_count > 0 and success_indicators > 0:
+            return "MEDIUM: mixed results, some progress with errors"
+
+        return "MEDIUM: insufficient signal to determine progress"
+
+    def detect_stuck_pattern(self, messages: list[dict]) -> bool:
+        if len(messages) < 6:
+            return False
+
+        recent = messages[-6:]
+        contents = []
+        for msg in recent:
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                contents.append(content.strip().lower()[:200])
+
+        if len(contents) < 4:
+            return False
+
+        unique_ratio = len(set(contents)) / len(contents)
+        if unique_ratio <= 0.5:
+            return True
+
+        bigrams = []
+        for i in range(len(contents) - 1):
+            bigrams.append(f"{contents[i][:50]}|{contents[i + 1][:50]}")
+        if len(bigrams) >= 4:
+            unique_bigrams = len(set(bigrams))
+            if unique_bigrams <= len(bigrams) * 0.5:
+                return True
+
+        return False
+
+    def tag_project(self, project_root: str):
+        self._current_project = project_root

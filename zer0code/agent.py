@@ -1,9 +1,20 @@
 import asyncio
+import hashlib
 import json
 import time
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from zer0code.config import ZeroCodeConfig
+from zer0code.cost import CostTracker
+from zer0code.context import ContextCompactor, ProjectContext
+from zer0code.hooks import AutoLintHook, HookManager
+from zer0code.memory import LoopDetector, MemoryStore, ReflectionEngine
+from zer0code.permissions import PermissionManager
+from zer0code.providers import get_provider
+from zer0code.providers.base import BaseProvider, ProviderResponse
+from zer0code.session import SessionManager
+from zer0code.tools.base import BaseTool, ToolResult
+
 
 SYSTEM_PROMPT = """You are ZER0CODE — an elite AI-powered penetration testing operator embedded in a terminal environment.
 
@@ -20,6 +31,7 @@ CAPABILITIES:
 - Analyze code, binaries, network captures, and configurations
 - Generate payloads, wordlists, and custom tooling on the fly
 - Chain multiple tools and techniques in complex attack sequences
+- Learn from past mistakes and adapt strategies
 
 OPERATIONAL DOCTRINE:
 1. ENUMERATE before you exploit. Gather information methodically.
@@ -29,6 +41,8 @@ OPERATIONAL DOCTRINE:
 5. Clean up after yourself. Remove artifacts, restore configs.
 6. When stuck, change your approach. Try a different tool, technique, or angle.
 7. Prioritize stealth when instructed. Adapt TTPs to avoid detection.
+8. When a tool fails repeatedly, switch to an alternative approach entirely.
+9. Execute multiple independent tool calls in parallel when possible.
 
 RESPONSE STYLE:
 - Be direct and technical. No fluff.
@@ -37,355 +51,377 @@ RESPONSE STYLE:
 - Use markdown formatting for readability.
 - When showing code or commands, use fenced code blocks.
 
-LEARNING FROM EXPERIENCE:
+{project_context}
+
 {memory_context}
 
-AVAILABLE TOOLS:
-{tools_context}
+{loop_warning}
 
-You are the operator's force multiplier. Make every keystroke count."""
+{confidence_assessment}"""
 
 
 class ZeroCoreAgent:
     def __init__(self, config: ZeroCodeConfig):
         self.config = config
         self.conversation_history: List[Dict[str, Any]] = []
-        self.tool_registry: Dict[str, Any] = {}
-        self.provider = None
-        self.memory = None
+        self.tool_registry: Dict[str, BaseTool] = {}
+        self.provider: Optional[BaseProvider] = None
+        self.cost_tracker = CostTracker()
+        self.loop_detector = LoopDetector()
+        self.permissions: Optional[PermissionManager] = None
+        self.memory_store: Optional[MemoryStore] = None
+        self.reflection: Optional[ReflectionEngine] = None
+        self.session_manager: Optional[SessionManager] = None
+        self.session_id: Optional[str] = None
+        self.project_context = ProjectContext()
+        self.compactor: Optional[ContextCompactor] = None
+        self.hooks = HookManager()
+        self.mcp_tools: Dict[str, Any] = {}
         self._start_time = time.time()
+        self._on_tool_call: Optional[Callable] = None
+        self._on_tool_result: Optional[Callable] = None
+
+    async def initialize(self):
+        provider_config = self.config.get_provider_config()
+        self.provider = get_provider(
+            self.config.provider,
+            model=self.config.model,
+            api_key=provider_config.get("api_key", ""),
+            base_url=provider_config.get("base_url", ""),
+        )
+        self.compactor = ContextCompactor(provider=self.provider)
+
+        if self.config.memory_enabled:
+            self.memory_store = MemoryStore(self.config.memory_db_path)
+            await self.memory_store.init()
+            self.reflection = ReflectionEngine(self.memory_store)
+
+        self.project_context.detect_project_root()
+        self.project_context.load_instructions()
+        self.project_context.detect_tech_stack()
+
+        self.hooks.register("post_tool", "auto_lint", AutoLintHook.on_file_write)
+
+    def register_tool(self, tool: BaseTool) -> None:
+        instance = tool() if isinstance(tool, type) else tool
+        self.tool_registry[instance.name] = instance
+
+    def register_tools(self, tools: List) -> None:
+        for tool in tools:
+            self.register_tool(tool)
+
+    def register_mcp_tools(self, schemas: List[Dict], call_fn: Callable) -> None:
+        for schema in schemas:
+            func = schema.get("function", {})
+            name = func.get("name", "")
+            if name:
+                self.mcp_tools[name] = {
+                    "schema": schema,
+                    "call_fn": call_fn,
+                    "description": func.get("description", ""),
+                    "parameters": func.get("parameters", {}),
+                }
+
+    def set_callbacks(
+        self,
+        on_tool_call: Optional[Callable] = None,
+        on_tool_result: Optional[Callable] = None,
+    ):
+        self._on_tool_call = on_tool_call
+        self._on_tool_result = on_tool_result
 
     def _build_system_prompt(self) -> str:
-        memory_context = "No prior lessons loaded."
-        if self.memory:
+        memory_context = ""
+        if self.reflection:
             try:
-                lessons = self.memory.get_recent_lessons(limit=10)
-                if lessons:
-                    memory_context = "Lessons from past operations:\n"
-                    for lesson in lessons:
-                        memory_context += f"- {lesson}\n"
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    memory_context = ""
+                else:
+                    memory_context = loop.run_until_complete(
+                        self.reflection.get_context_memories("")
+                    )
             except Exception:
                 pass
 
-        tools_context = "No tools registered."
-        if self.tool_registry:
-            tool_descriptions = []
-            for name, tool in self.tool_registry.items():
-                desc = getattr(tool, "description", name)
-                params = getattr(tool, "parameters", {})
-                tool_descriptions.append(
-                    f"- **{name}**: {desc}\n  Parameters: {json.dumps(params)}"
-                )
-            tools_context = "\n".join(tool_descriptions)
+        project_context = self.project_context.get_context_prompt()
+
+        loop_warning = ""
+        if self.loop_detector.is_looping():
+            loop_warning = f"WARNING: {self.loop_detector.get_loop_info()}"
+
+        confidence_assessment = ""
+        if self.reflection and len(self.conversation_history) > 10:
+            try:
+                confidence_assessment = "SELF-ASSESSMENT: Monitor for repeated patterns."
+            except Exception:
+                pass
 
         return SYSTEM_PROMPT.format(
+            project_context=project_context,
             memory_context=memory_context,
-            tools_context=tools_context,
+            loop_warning=loop_warning,
+            confidence_assessment=confidence_assessment,
         )
-
-    def register_tool(self, name: str, tool: Any) -> None:
-        self.tool_registry[name] = tool
 
     def _get_messages(self) -> List[Dict[str, Any]]:
         system_msg = {"role": "system", "content": self._build_system_prompt()}
         return [system_msg] + self.conversation_history
 
-    async def _call_provider(self) -> Dict[str, Any]:
-        messages = self._get_messages()
-        provider_config = self.config.get_provider_config()
-
-        if self.provider:
-            return await self.provider.chat(
-                messages=messages,
-                tools=self._get_tool_schemas(),
-                **provider_config,
-            )
-
-        return await self._default_provider_call(messages, provider_config)
-
-    async def _default_provider_call(
-        self, messages: List[Dict], provider_config: Dict
-    ) -> Dict[str, Any]:
-        try:
-            if provider_config["provider"] in ("openai", "ollama"):
-                return await self._openai_compatible_call(messages, provider_config)
-            elif provider_config["provider"] == "anthropic":
-                return await self._anthropic_call(messages, provider_config)
-        except ImportError:
-            return {
-                "content": f"Provider SDK for '{provider_config['provider']}' is not installed.",
-                "tool_calls": None,
-            }
-        except Exception as e:
-            return {
-                "content": f"Provider error: {str(e)}",
-                "tool_calls": None,
-            }
-
-        return {"content": "Unknown provider configured.", "tool_calls": None}
-
-    async def _openai_compatible_call(
-        self, messages: List[Dict], provider_config: Dict
-    ) -> Dict[str, Any]:
-        from openai import AsyncOpenAI
-
-        client = AsyncOpenAI(
-            api_key=provider_config.get("api_key", ""),
-            base_url=provider_config.get("base_url"),
-        )
-
-        kwargs: Dict[str, Any] = {
-            "model": provider_config["model"],
-            "messages": messages,
-        }
-
-        tool_schemas = self._get_tool_schemas()
-        if tool_schemas:
-            kwargs["tools"] = tool_schemas
-
-        response = await client.chat.completions.create(**kwargs)
-        message = response.choices[0].message
-
-        tool_calls = None
-        if message.tool_calls:
-            tool_calls = [
-                {
-                    "id": tc.id,
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments,
-                }
-                for tc in message.tool_calls
-            ]
-
-        return {
-            "content": message.content or "",
-            "tool_calls": tool_calls,
-        }
-
-    async def _anthropic_call(
-        self, messages: List[Dict], provider_config: Dict
-    ) -> Dict[str, Any]:
-        from anthropic import AsyncAnthropic
-
-        client = AsyncAnthropic(api_key=provider_config.get("api_key", ""))
-
-        system_content = ""
-        filtered_messages = []
-        for msg in messages:
-            if msg["role"] == "system":
-                system_content += msg["content"] + "\n"
-            else:
-                filtered_messages.append(msg)
-
-        kwargs: Dict[str, Any] = {
-            "model": provider_config["model"],
-            "max_tokens": 4096,
-            "system": system_content.strip(),
-            "messages": filtered_messages,
-        }
-
-        tool_schemas = self._get_tool_schemas()
-        if tool_schemas:
-            anthropic_tools = []
-            for schema in tool_schemas:
-                anthropic_tools.append(
-                    {
-                        "name": schema["function"]["name"],
-                        "description": schema["function"].get("description", ""),
-                        "input_schema": schema["function"].get("parameters", {}),
-                    }
-                )
-            kwargs["tools"] = anthropic_tools
-
-        response = await client.messages.create(**kwargs)
-
-        content_text = ""
-        tool_calls = []
-
-        for block in response.content:
-            if block.type == "text":
-                content_text += block.text
-            elif block.type == "tool_use":
-                tool_calls.append(
-                    {
-                        "id": block.id,
-                        "name": block.name,
-                        "arguments": json.dumps(block.input),
-                    }
-                )
-
-        return {
-            "content": content_text,
-            "tool_calls": tool_calls if tool_calls else None,
-        }
-
-    async def _stream_provider(self) -> AsyncGenerator[str, None]:
-        messages = self._get_messages()
-        provider_config = self.config.get_provider_config()
-
-        try:
-            if provider_config["provider"] in ("openai", "ollama"):
-                async for chunk in self._openai_stream(messages, provider_config):
-                    yield chunk
-            elif provider_config["provider"] == "anthropic":
-                async for chunk in self._anthropic_stream(messages, provider_config):
-                    yield chunk
-            else:
-                yield "Unknown provider configured."
-        except ImportError:
-            yield f"Provider SDK for '{provider_config['provider']}' is not installed."
-        except Exception as e:
-            yield f"Provider error: {str(e)}"
-
-    async def _openai_stream(
-        self, messages: List[Dict], provider_config: Dict
-    ) -> AsyncGenerator[str, None]:
-        from openai import AsyncOpenAI
-
-        client = AsyncOpenAI(
-            api_key=provider_config.get("api_key", ""),
-            base_url=provider_config.get("base_url"),
-        )
-
-        response = await client.chat.completions.create(
-            model=provider_config["model"],
-            messages=messages,
-            stream=True,
-        )
-
-        async for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-
-    async def _anthropic_stream(
-        self, messages: List[Dict], provider_config: Dict
-    ) -> AsyncGenerator[str, None]:
-        from anthropic import AsyncAnthropic
-
-        client = AsyncAnthropic(api_key=provider_config.get("api_key", ""))
-
-        system_content = ""
-        filtered_messages = []
-        for msg in messages:
-            if msg["role"] == "system":
-                system_content += msg["content"] + "\n"
-            else:
-                filtered_messages.append(msg)
-
-        async with client.messages.stream(
-            model=provider_config["model"],
-            max_tokens=4096,
-            system=system_content.strip(),
-            messages=filtered_messages,
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
-
     def _get_tool_schemas(self) -> List[Dict[str, Any]]:
         schemas = []
         for name, tool in self.tool_registry.items():
-            schema = {
+            schemas.append(tool.schema() if hasattr(tool, "schema") else {
                 "type": "function",
                 "function": {
                     "name": name,
                     "description": getattr(tool, "description", ""),
                     "parameters": getattr(tool, "parameters", {"type": "object", "properties": {}}),
                 },
-            }
-            schemas.append(schema)
+            })
+        for name, mcp_tool in self.mcp_tools.items():
+            schemas.append(mcp_tool["schema"])
         return schemas
 
-    async def execute_tool_call(self, tool_call: Dict[str, Any]) -> str:
-        name = tool_call["name"]
+    async def execute_tool_call(self, tool_call: Dict[str, Any]) -> ToolResult:
+        name = tool_call.get("name", "")
         try:
             arguments = json.loads(tool_call.get("arguments", "{}"))
         except json.JSONDecodeError:
-            return json.dumps({"error": f"Invalid JSON arguments for tool '{name}'"})
+            return ToolResult(output="", success=False, error=f"Invalid JSON arguments for tool '{name}'")
 
-        tool = self.tool_registry.get(name)
-        if not tool:
-            return json.dumps({"error": f"Tool '{name}' not found in registry"})
+        if self.permissions:
+            approved, reason = await self.permissions.check_permission(name, arguments)
+            if not approved:
+                return ToolResult(output="", success=False, error=f"Permission denied: {reason}")
 
-        try:
-            if asyncio.iscoroutinefunction(getattr(tool, "execute", None)):
+        if self._on_tool_call:
+            try:
+                self._on_tool_call(name, arguments)
+            except Exception:
+                pass
+
+        await self.hooks.trigger("pre_tool", tool_name=name, args=arguments)
+
+        start_time = time.monotonic()
+
+        if name in self.mcp_tools:
+            try:
+                result_text = await self.mcp_tools[name]["call_fn"](name, arguments)
+                result = ToolResult(output=result_text, success=True)
+            except Exception as e:
+                result = ToolResult(output="", success=False, error=str(e))
+        elif name in self.tool_registry:
+            tool = self.tool_registry[name]
+            try:
                 result = await tool.execute(**arguments)
-            elif hasattr(tool, "execute"):
-                result = tool.execute(**arguments)
-            elif callable(tool):
-                if asyncio.iscoroutinefunction(tool):
-                    result = await tool(**arguments)
-                else:
-                    result = tool(**arguments)
+            except Exception as e:
+                result = ToolResult(output="", success=False, error=str(e))
+        else:
+            result = ToolResult(output="", success=False, error=f"Tool '{name}' not found")
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+
+        result_hash = hashlib.md5(result.output[:500].encode()).hexdigest()[:12] if result.output else ""
+        self.loop_detector.record_call(name, arguments, result_hash)
+
+        if self.reflection:
+            if result.success:
+                await self.reflection.analyze_tool_success(name, arguments, result.output, "")
             else:
-                return json.dumps({"error": f"Tool '{name}' is not executable"})
+                await self.reflection.analyze_tool_failure(name, arguments, result.error or "", "")
 
-            if isinstance(result, str):
-                return result
-            return json.dumps(result, default=str)
+            if self.memory_store and self.session_id:
+                await self.memory_store.add_episode(
+                    self.session_id, name, arguments,
+                    result.output[:500] if result.output else (result.error or ""),
+                    result.success, "", duration_ms,
+                )
 
-        except Exception as e:
-            error_result = {"error": str(e), "tool": name}
-            if self.memory and self.config.memory_enabled:
-                try:
-                    self.memory.record_mistake(
-                        tool=name,
-                        error=str(e),
-                        arguments=arguments,
-                    )
-                except Exception:
-                    pass
-            return json.dumps(error_result)
+        hook_results = await self.hooks.trigger(
+            "post_tool", tool_name=name, args=arguments,
+            file_path=arguments.get("file_path", arguments.get("filePath", "")),
+        )
+        hook_messages = [hr.message for hr in hook_results if hr.message]
+
+        if self._on_tool_result:
+            try:
+                self._on_tool_result(name, result, hook_messages)
+            except Exception:
+                pass
+
+        if hook_messages:
+            result.output += "\n\n[Lint Output]\n" + "\n".join(hook_messages)
+
+        return result
+
+    async def _execute_tools_parallel(self, tool_calls: List[Dict]) -> List[Dict]:
+        tasks = [self.execute_tool_call(tc) for tc in tool_calls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        tool_messages = []
+        for tc, result in zip(tool_calls, results):
+            if isinstance(result, Exception):
+                output = json.dumps({"error": str(result)})
+            elif isinstance(result, ToolResult):
+                if result.success:
+                    output = result.output
+                else:
+                    output = json.dumps({"error": result.error or "Unknown error"})
+            else:
+                output = str(result)
+
+            tool_messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", ""),
+                "name": tc.get("name", ""),
+                "content": output,
+            })
+        return tool_messages
 
     async def run(self, user_input: str) -> str:
         self.conversation_history.append({"role": "user", "content": user_input})
+        if self.session_manager and self.session_id:
+            await self.session_manager.save_message(self.session_id, {"role": "user", "content": user_input})
 
-        max_iterations = 20
+        if self.compactor and self.compactor.needs_compaction(self.conversation_history):
+            self.conversation_history = await self.compactor.compact(self.conversation_history)
+
+        max_iterations = 25
         iteration = 0
 
         while iteration < max_iterations:
             iteration += 1
-            response = await self._call_provider()
 
-            assistant_message: Dict[str, Any] = {
-                "role": "assistant",
-                "content": response.get("content", ""),
-            }
+            if self.loop_detector.is_looping():
+                loop_info = self.loop_detector.get_loop_info()
+                self.conversation_history.append({
+                    "role": "system",
+                    "content": f"AGENT LOOP DETECTED: {loop_info}\nYou MUST try a completely different approach. Do NOT repeat the same tool calls.",
+                })
+                self.loop_detector.reset()
 
-            if response.get("tool_calls"):
-                assistant_message["tool_calls"] = response["tool_calls"]
-                self.conversation_history.append(assistant_message)
+            messages = self._get_messages()
+            tool_schemas = self._get_tool_schemas()
 
-                for tool_call in response["tool_calls"]:
-                    result = await self.execute_tool_call(tool_call)
-                    self.conversation_history.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call["id"],
-                            "name": tool_call["name"],
-                            "content": result,
-                        }
-                    )
+            response = await self.provider.chat(
+                messages=messages,
+                tools=tool_schemas if tool_schemas else None,
+            )
+
+            self.cost_tracker.track(
+                self.config.model,
+                response.usage.get("prompt_tokens", 0),
+                response.usage.get("completion_tokens", 0),
+            )
+
+            if response.tool_calls:
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": response.content or "",
+                    "tool_calls": response.tool_calls,
+                }
+                self.conversation_history.append(assistant_msg)
+
+                if self.session_manager and self.session_id:
+                    await self.session_manager.save_message(self.session_id, assistant_msg)
+
+                tool_messages = await self._execute_tools_parallel(response.tool_calls)
+                for tm in tool_messages:
+                    self.conversation_history.append(tm)
+                    if self.session_manager and self.session_id:
+                        await self.session_manager.save_message(self.session_id, tm)
+
+                if self.reflection and self.reflection.should_trigger_reflection("", False):
+                    await self.reflection.periodic_reflection(self.conversation_history)
+
             else:
-                self.conversation_history.append(assistant_message)
-                return response.get("content", "")
+                assistant_msg = {"role": "assistant", "content": response.content or ""}
+                self.conversation_history.append(assistant_msg)
+                if self.session_manager and self.session_id:
+                    await self.session_manager.save_message(self.session_id, assistant_msg)
+                return response.content or ""
 
-        return "[ZER0CODE] Max tool iterations reached. Halting loop."
+        return "[ZER0CODE] Max iterations (25) reached. Use /compact to reduce context and try again."
 
-    async def run_stream(self, user_input: str) -> AsyncGenerator[str, None]:
+    async def run_stream(self, user_input: str) -> AsyncGenerator[str | Dict, None]:
         self.conversation_history.append({"role": "user", "content": user_input})
+        if self.session_manager and self.session_id:
+            await self.session_manager.save_message(self.session_id, {"role": "user", "content": user_input})
 
-        collected = []
-        async for chunk in self._stream_provider():
-            collected.append(chunk)
-            yield chunk
+        if self.compactor and self.compactor.needs_compaction(self.conversation_history):
+            self.conversation_history = await self.compactor.compact(self.conversation_history)
 
-        full_response = "".join(collected)
-        self.conversation_history.append(
-            {"role": "assistant", "content": full_response}
-        )
+        max_iterations = 25
+        iteration = 0
+
+        while iteration < max_iterations:
+            iteration += 1
+
+            if self.loop_detector.is_looping():
+                loop_info = self.loop_detector.get_loop_info()
+                self.conversation_history.append({
+                    "role": "system",
+                    "content": f"AGENT LOOP DETECTED: {loop_info}\nYou MUST try a completely different approach.",
+                })
+                self.loop_detector.reset()
+
+            messages = self._get_messages()
+            tool_schemas = self._get_tool_schemas()
+
+            collected_text = []
+            collected_tool_calls = []
+
+            async for chunk in self.provider.stream_chat(messages=messages, tools=tool_schemas if tool_schemas else None):
+                if isinstance(chunk, str):
+                    collected_text.append(chunk)
+                    yield chunk
+                elif isinstance(chunk, dict):
+                    collected_tool_calls.append(chunk)
+
+            if collected_tool_calls:
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": "".join(collected_text),
+                    "tool_calls": collected_tool_calls,
+                }
+                self.conversation_history.append(assistant_msg)
+
+                for tc in collected_tool_calls:
+                    yield {"type": "tool_call", "name": tc.get("name", ""), "arguments": tc.get("arguments", "{}")}
+
+                tool_messages = await self._execute_tools_parallel(collected_tool_calls)
+                for tm in tool_messages:
+                    self.conversation_history.append(tm)
+                    yield {"type": "tool_result", "name": tm.get("name", ""), "content": tm["content"]}
+
+                if self.session_manager and self.session_id:
+                    await self.session_manager.save_message(self.session_id, assistant_msg)
+                    for tm in tool_messages:
+                        await self.session_manager.save_message(self.session_id, tm)
+            else:
+                full_text = "".join(collected_text)
+                assistant_msg = {"role": "assistant", "content": full_text}
+                self.conversation_history.append(assistant_msg)
+                if self.session_manager and self.session_id:
+                    await self.session_manager.save_message(self.session_id, assistant_msg)
+                return
+
+        yield "\n[ZER0CODE] Max iterations reached."
+
+    async def load_session(self, session_id: str) -> bool:
+        if not self.session_manager:
+            return False
+        messages = await self.session_manager.load_session(session_id)
+        if messages:
+            self.conversation_history = messages
+            self.session_id = session_id
+            return True
+        return False
 
     def reset(self) -> None:
         self.conversation_history.clear()
+        self.loop_detector.reset()
         self._start_time = time.time()
 
     @property
@@ -394,6 +430,12 @@ class ZeroCoreAgent:
 
     @property
     def message_count(self) -> int:
-        return len(
-            [m for m in self.conversation_history if m["role"] in ("user", "assistant")]
-        )
+        return len([m for m in self.conversation_history if m["role"] in ("user", "assistant")])
+
+    @property
+    def total_tokens(self) -> int:
+        return self.cost_tracker.total_tokens
+
+    @property
+    def total_cost(self) -> str:
+        return self.cost_tracker.format_cost()
