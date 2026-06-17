@@ -1,0 +1,51 @@
+{
+  "name": "zer0code",
+  "version": "0.2.0",
+  "description": "ZER0CODE — Autonomous AI Coding Agent for Expert Penetration Testers",
+  "author": "aloc999",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aloc999/ZER0CODE.git"
+  },
+  "homepage": "https://github.com/aloc999/ZER0CODE",
+  "bugs": {
+    "url": "https://github.com/aloc999/ZER0CODE/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "pentesting",
+    "security",
+    "coding",
+    "cli",
+    "deepseek",
+    "openai",
+    "anthropic",
+    "hacking"
+  ],
+  "bin": {
+    "zer0code": "bin/zer0code",
+    "z0": "bin/zer0code"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "zer0code/",
+    "requirements.txt",
+    "pyproject.toml",
+    "LICENSE",
+    "README.md"
+  ],
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

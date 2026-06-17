@@ -10,6 +10,7 @@
 
 ### **Autonomous AI Coding Agent for Expert Penetration Testers**
 
+[![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
@@ -111,6 +112,16 @@ Web Recon, API Testing, XSS Hunter, SQLi Master, SSRF Exploit, Auth Bypass, Linu
 ---
 
 ## Installation
+
+### npm (Recommended)
+
+```bash
+npm install -g zer0code
+```
+
+That's it. The installer automatically sets up Python, creates a virtual environment, and installs all dependencies.
+
+### pip (Alternative)
 
 ```bash
 git clone https://github.com/aloc999/zer0code.git
