@@ -33,6 +33,14 @@ VALID_PROVIDERS = ["openai", "anthropic", "deepseek", "ollama"]
 GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchTool]
 
 
+def _safe_input(console, prompt_text: str):
+    try:
+        return console.input(prompt_text)
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n")
+        return None
+
+
 def get_history_path() -> Path:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     return CONFIG_DIR / "history.txt"
@@ -169,8 +177,11 @@ async def handle_slash_command(
                     ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
                     try:
                         key_input = await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: ui.console.input(f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
+                            None, lambda: _safe_input(ui.console, f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
                         )
+                        if key_input is None:
+                            ui.console.print(Text("  Cancelled.", style="dim"))
+                            return False
                         key_input = key_input.strip()
                         if not key_input:
                             ui.console.print(Text("  Cancelled.", style="dim"))
@@ -216,8 +227,11 @@ async def handle_slash_command(
             ui.console.print()
             try:
                 choice = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: ui.console.input("[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
+                    None, lambda: _safe_input(ui.console, "[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
                 )
+                if choice is None:
+                    ui.console.print(Text("  Cancelled.", style="dim"))
+                    return False
                 choice = choice.strip()
                 if not choice:
                     return False
@@ -234,8 +248,11 @@ async def handle_slash_command(
                     ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
                     try:
                         key_input = await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: ui.console.input(f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
+                            None, lambda: _safe_input(ui.console, f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
                         )
+                        if key_input is None:
+                            ui.console.print(Text("  Cancelled.", style="dim"))
+                            return False
                         key_input = key_input.strip()
                         if not key_input:
                             ui.console.print(Text("  Cancelled.", style="dim"))
@@ -264,8 +281,10 @@ async def handle_slash_command(
                 ui.console.print()
 
                 model_choice = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: ui.console.input("[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
+                    None, lambda: _safe_input(ui.console, "[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
                 )
+                if model_choice is None:
+                    model_choice = ""
                 model_choice = model_choice.strip()
                 if model_choice.isdigit() and 1 <= int(model_choice) <= len(models):
                     selected_model = models[int(model_choice) - 1]
