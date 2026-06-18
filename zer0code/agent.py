@@ -241,6 +241,21 @@ class ZeroCoreAgent:
                 m["content"] = "\n".join(text_parts) if text_parts else ""
             elif content is None:
                 m["content"] = ""
+            if "tool_calls" in m and m["tool_calls"]:
+                fixed_calls = []
+                for tc in m["tool_calls"]:
+                    if isinstance(tc, dict) and "type" not in tc:
+                        fixed_calls.append({
+                            "id": tc.get("id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": tc.get("name", ""),
+                                "arguments": tc.get("arguments", "{}"),
+                            },
+                        })
+                    else:
+                        fixed_calls.append(tc)
+                m["tool_calls"] = fixed_calls
             sanitized.append(m)
         return sanitized
 

@@ -951,18 +951,26 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     diff_renderer = DiffRenderer()
 
+    _last_file_path = [None]
+
     def on_tool_call(name, args):
         ui.render_tool_call(name, args)
+        if name == "read_file":
+            _last_file_path[0] = args.get("file_path", "")
 
     def on_tool_result(name, result, hook_messages=None):
-        if name == "edit_file" and result.success:
-            old_str = json.loads(result.output).get("old_string", "") if result.output.startswith("{") else ""
-            new_str = json.loads(result.output).get("new_string", "") if result.output.startswith("{") else ""
-        
         display = result.output if result.success else (result.error or "Error")
         if len(display) > 2000:
             display = display[:1000] + f"\n... ({len(display)} chars total) ...\n" + display[-500:]
         ui.render_tool_result(name, display, result.success)
+
+        if name == "read_file" and result.success and _last_file_path[0]:
+            fp = _last_file_path[0]
+            if fp.endswith((".html", ".htm")):
+                import webbrowser
+                abs_path = os.path.abspath(fp)
+                webbrowser.open(f"file://{abs_path}")
+                ui.console.print(Text(f"  ↗ Opened in browser: {fp}", style="bold cyan"))
 
         if hook_messages:
             for msg in hook_messages:
