@@ -1153,14 +1153,19 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                     break
                 continue
 
-            ui.console.print()
+            console.print()
+            console.print(Text("  ◐ Thinking...", style="dim yellow"))
 
+            collected_text = []
             try:
-                response = await agent.run(user_input)
+                async for chunk in agent.run_stream(user_input):
+                    if isinstance(chunk, str):
+                        collected_text.append(chunk)
             except Exception as e:
                 ui.render_error(str(e))
                 continue
 
+            response = "".join(collected_text)
             if response:
                 ui.render_response(response)
 
