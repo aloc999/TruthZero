@@ -34,11 +34,22 @@ GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchToo
 
 
 def _safe_input(console, prompt_text: str):
+    import signal
+    result = None
+    got_cancel = []
+    def _sigint_handler(sig, frame):
+        got_cancel.append(True)
+        raise EOFError()
+    old_handler = signal.getsignal(signal.SIGINT)
     try:
-        return console.input(prompt_text)
+        signal.signal(signal.SIGINT, _sigint_handler)
+        result = console.input(prompt_text)
     except (KeyboardInterrupt, EOFError):
-        console.print("\n")
-        return None
+        console.print(Text("  Cancelled.", style="dim"))
+        result = None
+    finally:
+        signal.signal(signal.SIGINT, old_handler)
+    return result
 
 
 def get_history_path() -> Path:
