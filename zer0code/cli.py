@@ -898,29 +898,30 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         await session_mgr.close()
 
 
-async def _launch_tui(config: ZeroCodeConfig, resume: str = "") -> None:
+def _launch_tui_sync(config: ZeroCodeConfig, resume: str = "") -> None:
     from zer0code.tui_app import run_tui, HAS_TEXTUAL
     if not HAS_TEXTUAL:
         print("TUI mode requires 'textual'. Install: pip install zer0code[tui]")
         print("Falling back to REPL mode...")
-        await interactive_session(config, resume_session=resume)
+        asyncio.run(interactive_session(config, resume_session=resume))
         return
 
-    agent = ZeroCoreAgent(config)
-    await agent.initialize()
-    agent.register_tools(ALL_TOOLS)
-    agent.register_tools(SECURITY_TOOLS)
-    agent.register_tools(GIT_TOOLS)
+    async def _init_agent():
+        agent = ZeroCoreAgent(config)
+        await agent.initialize()
+        agent.register_tools(ALL_TOOLS)
+        agent.register_tools(SECURITY_TOOLS)
+        agent.register_tools(GIT_TOOLS)
+        session_mgr = SessionManager()
+        await session_mgr.init()
+        agent.session_manager = session_mgr
+        if resume:
+            await agent.load_session(resume)
+        else:
+            agent.session_id = await session_mgr.create_session(provider=config.provider, model=config.model)
+        return agent
 
-    session_mgr = SessionManager()
-    await session_mgr.init()
-    agent.session_manager = session_mgr
-
-    if resume:
-        await agent.load_session(resume)
-    else:
-        agent.session_id = await session_mgr.create_session(provider=config.provider, model=config.model)
-
+    agent = asyncio.run(_init_agent())
     run_tui(agent=agent, config=config)
 
 
@@ -959,7 +960,7 @@ def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_las
 
     if ctx.invoked_subcommand is None:
         if tui:
-            asyncio.run(_launch_tui(config, resume))
+            _launch_tui_sync(config, resume)
         else:
             asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
 
@@ -1077,7 +1078,7 @@ def version() -> None:
 @click.pass_context
 def tui(ctx: click.Context) -> None:
     config = ctx.obj["config"]
-    asyncio.run(_launch_tui(config))
+    _launch_tui_sync(config)
 
 
 def main() -> None:
