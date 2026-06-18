@@ -975,20 +975,20 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     console.print()
     logo = Text()
-    logo.append("  ░▒▓█▓▒░  ", style="bold green")
+    logo.append("  ▄██▄  ", style="bold green")
     logo.append(f"ZER0CODE", style="bold green")
     logo.append(f" v{__version__}", style="dim")
     console.print(logo)
 
     line2 = Text()
-    line2.append("  ▓█████▓  ", style="bold green")
+    line2.append("  █  █  ", style="bold green")
     line2.append(f"{config.model}", style="bold cyan")
     line2.append(" · ", style="dim")
     line2.append(f"{config.provider.title()} API", style="dim")
     console.print(line2)
 
     line3 = Text()
-    line3.append("  ░▒▓█▓▒░  ", style="bold green")
+    line3.append("  ▀██▀  ", style="bold green")
     line3.append(os.getcwd(), style="dim")
     console.print(line3)
 
