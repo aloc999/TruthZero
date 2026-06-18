@@ -931,10 +931,10 @@ def _launch_tui_sync(config: ZeroCodeConfig, resume: str = "") -> None:
 @click.option("--resume", "-r", default="", help="Resume session ID")
 @click.option("--continue-last", "-c", is_flag=True, default=False, help="Continue most recent session")
 @click.option("--print-mode", is_flag=True, default=False, help="Non-interactive mode, print output and exit")
-@click.option("--tui", is_flag=True, default=False, help="Launch full-screen TUI mode")
+@click.option("--repl", is_flag=True, default=False, help="Launch classic REPL mode instead of TUI")
 @click.option("--theme", "-t", default=None, help="UI theme")
 @click.pass_context
-def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, tui: bool, theme: str) -> None:
+def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, repl: bool, theme: str) -> None:
     ctx.ensure_object(dict)
     config = ZeroCodeConfig.load()
     if provider:
@@ -959,10 +959,10 @@ def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_las
             pass
 
     if ctx.invoked_subcommand is None:
-        if tui:
-            _launch_tui_sync(config, resume)
-        else:
+        if repl or print_mode:
             asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
+        else:
+            _launch_tui_sync(config, resume)
 
 
 @cli.command()
