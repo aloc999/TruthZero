@@ -166,9 +166,26 @@ async def handle_slash_command(
             if new_provider in VALID_PROVIDERS:
                 env_key = ENV_KEYS.get(new_provider)
                 if env_key and not os.environ.get(env_key):
-                    ui.console.print(Text(f"  ✗ {env_key} not set. Run: export {env_key}=\"your-key\"", style="bold red"))
-                    ui.console.print(Text(f"  Or use /login {new_provider} <key>", style="dim"))
-                    return False
+                    ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
+                    try:
+                        key_input = await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: ui.console.input(f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
+                        )
+                        key_input = key_input.strip()
+                        if not key_input:
+                            ui.console.print(Text("  Cancelled.", style="dim"))
+                            return False
+                        os.environ[env_key] = key_input
+                        try:
+                            from zer0code.credentials import CredentialManager
+                            cm = CredentialManager()
+                            cm.set(env_key, key_input)
+                        except Exception:
+                            pass
+                        ui.console.print(Text(f"  ✓ API key saved and activated.", style="bold green"))
+                    except (EOFError, KeyboardInterrupt):
+                        ui.console.print(Text("  Cancelled.", style="dim"))
+                        return False
                 config.provider = new_provider
                 if len(parts) > 1:
                     config.model = parts[1].strip()
@@ -215,9 +232,25 @@ async def handle_slash_command(
                 env_key = ENV_KEYS.get(selected_provider)
                 if env_key and not os.environ.get(env_key):
                     ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
-                    ui.console.print(Text(f"  Run: export {env_key}=\"your-key\"", style="dim"))
-                    ui.console.print(Text(f"  Or:  /login {selected_provider} <key>\n", style="dim"))
-                    return False
+                    try:
+                        key_input = await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: ui.console.input(f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
+                        )
+                        key_input = key_input.strip()
+                        if not key_input:
+                            ui.console.print(Text("  Cancelled.", style="dim"))
+                            return False
+                        os.environ[env_key] = key_input
+                        try:
+                            from zer0code.credentials import CredentialManager
+                            cm = CredentialManager()
+                            cm.set(env_key, key_input)
+                        except Exception:
+                            pass
+                        ui.console.print(Text(f"  ✓ API key saved.", style="bold green"))
+                    except (EOFError, KeyboardInterrupt):
+                        ui.console.print(Text("  Cancelled.", style="dim"))
+                        return False
 
                 models = PROVIDER_MODELS.get(selected_provider, [])
                 ui.console.print(Text(f"\n  Models for {selected_provider}:\n", style="bold cyan"))
@@ -889,6 +922,17 @@ async def handle_slash_command(
 
 
 async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", print_mode: bool = False) -> None:
+    try:
+        from zer0code.credentials import CredentialManager
+        cm = CredentialManager()
+        for env_name in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY"]:
+            if not os.environ.get(env_name):
+                saved = cm.get(env_name)
+                if saved:
+                    os.environ[env_name] = saved
+    except Exception:
+        pass
+
     ui = TerminalUI(
         config={"provider": config.provider, "model": config.model},
         theme_name=config.theme,
