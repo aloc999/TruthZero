@@ -172,26 +172,69 @@ async def handle_slash_command(
             ui.console.print(Text("  Usage: /session list | /session load <id> | /session title <name>", style="dim"))
 
     elif cmd == "/skill":
-        from zer0code.skills import PENTESTING_SKILLS
-        if args:
+        from zer0code.skills.loader import SkillLoader
+        loader = SkillLoader()
+        if not args:
+            by_cat = loader.list_by_category()
+            for category, skills in by_cat.items():
+                table = Table(title=category, border_style="magenta", expand=True)
+                table.add_column("Skill", style="bold magenta", width=22)
+                table.add_column("Description", style="white")
+                table.add_column("Lines", style="dim", width=6)
+                for skill in skills:
+                    table.add_row(
+                        skill["name"],
+                        skill.get("description", "")[:60],
+                        str(skill.get("lines", "")),
+                    )
+                ui.console.print(table)
+            ui.console.print(Text(f"\n  {loader.count} skills ({loader.builtin_count} builtin, {loader.custom_count} custom)", style="dim"))
+            ui.console.print(Text("  Usage: /skill <name> to load | /skill search <query> | /skill info <name>", style="dim"))
+        elif args.startswith("search "):
+            query = args[7:].strip()
+            results = loader.search(query)
+            if results:
+                for s in results:
+                    ui.console.print(Text(f"  {s['name']}: {s.get('description', '')[:80]}", style="white"))
+            else:
+                ui.console.print(Text(f"  No skills matching '{query}'", style="dim"))
+        elif args.startswith("info "):
+            skill_name = args[5:].strip()
+            skill = loader.get_skill(skill_name)
+            if skill:
+                ui.console.print(Text(f"\n  {skill.get('title', skill['name'])}", style="bold magenta"))
+                ui.console.print(Text(f"  Category: {skill.get('category', 'unknown')}", style="dim"))
+                ui.console.print(Text(f"  Lines: {skill.get('lines', '?')} | Custom: {skill.get('custom', False)}", style="dim"))
+                ui.console.print(Text(f"  {skill.get('description', '')}\n", style="white"))
+                preview = skill.get("content", "")[:500]
+                if len(skill.get("content", "")) > 500:
+                    preview += "\n..."
+                ui.console.print(Markdown(preview))
+            else:
+                ui.console.print(Text(f"  Skill '{skill_name}' not found.", style="red"))
+        elif args.startswith("create "):
+            skill_name = args[7:].strip()
+            filepath = loader.create_custom_skill(skill_name, skill_name.replace("-", " ").title(), "Add your methodology here.\n")
+            ui.console.print(Text(f"  Created custom skill: {filepath}", style="bold green"))
+            ui.console.print(Text(f"  Edit the file to add your methodology.", style="dim"))
+        else:
             skill_name = args.strip()
-            if skill_name in PENTESTING_SKILLS:
-                skill = PENTESTING_SKILLS[skill_name]
+            skill = loader.get_skill(skill_name)
+            if skill:
                 agent.conversation_history.append({
                     "role": "system",
-                    "content": f"LOADED SKILL: {skill['name']}\n{skill['system_prompt_addition']}",
+                    "content": f"LOADED SKILL: {skill.get('title', skill['name'])}\n\n{skill['system_prompt_addition']}",
                 })
-                ui.console.print(Text(f"  Skill loaded: {skill['name']}", style="bold green"))
-                ui.console.print(Text(f"  {skill['description']}", style="dim"))
+                ui.console.print(Text(f"  Skill loaded: {skill.get('title', skill['name'])} ({skill.get('lines', '?')} lines)", style="bold green"))
+                ui.console.print(Text(f"  {skill.get('description', '')}", style="dim"))
             else:
-                ui.console.print(Text(f"  Unknown skill. Available: {', '.join(PENTESTING_SKILLS.keys())}", style="red"))
-        else:
-            table = Table(title="Pentesting Skills", border_style="magenta")
-            table.add_column("Skill", style="bold magenta")
-            table.add_column("Description", style="white")
-            for name, skill in PENTESTING_SKILLS.items():
-                table.add_row(name, skill["description"])
-            ui.console.print(table)
+                matches = loader.search(skill_name)
+                if matches:
+                    ui.console.print(Text(f"  Skill '{skill_name}' not found. Did you mean:", style="yellow"))
+                    for m in matches[:5]:
+                        ui.console.print(Text(f"    - {m['name']}", style="dim"))
+                else:
+                    ui.console.print(Text(f"  Skill '{skill_name}' not found. Type /skill to list all.", style="red"))
 
     elif cmd == "/status":
         mem_count = 0
