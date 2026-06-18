@@ -375,6 +375,7 @@ if HAS_TEXTUAL:
             conv = self.query_one("#conversation", RichLog)
             ts = self._ts()
             collected_text = []
+            elapsed = 0.0
 
             try:
                 async for chunk in self.agent.run_stream(user_input):
