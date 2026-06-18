@@ -34,11 +34,7 @@ GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchToo
 
 
 def _safe_input(console, prompt_text: str):
-    try:
-        return console.input(prompt_text)
-    except (KeyboardInterrupt, EOFError):
-        console.print()
-        return None
+    return None
 
 
 def get_history_path() -> Path:
@@ -161,135 +157,44 @@ async def handle_slash_command(
             ui.console.print(Text(f"  /provider <name> or /provider <number> to switch", style="dim"))
 
     elif cmd == "/switch":
-        PROVIDER_MODELS = {
+        _PM = {
             "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini"],
             "anthropic": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
             "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
             "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2"],
         }
-        ENV_KEYS = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "ollama": None}
+        _EK = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "ollama": None}
         if args:
             parts = args.strip().split(maxsplit=1)
-            new_provider = parts[0].lower()
-            if new_provider in VALID_PROVIDERS:
-                env_key = ENV_KEYS.get(new_provider)
-                if env_key and not os.environ.get(env_key):
-                    ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
-                    try:
-                        key_input = _safe_input(ui.console, f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
-                        if key_input is None:
-                            return False
-                        key_input = key_input.strip()
-                        if not key_input:
-                            ui.console.print(Text("  Cancelled.", style="dim"))
-                            return False
-                        os.environ[env_key] = key_input
-                        try:
-                            from zer0code.credentials import CredentialManager
-                            cm = CredentialManager()
-                            cm.set(env_key, key_input)
-                        except Exception:
-                            pass
-                        ui.console.print(Text(f"  ✓ API key saved and activated.", style="bold green"))
-                    except (EOFError, KeyboardInterrupt):
-                        ui.console.print(Text("  Cancelled.", style="dim"))
-                        return False
-                config.provider = new_provider
-                if len(parts) > 1:
-                    config.model = parts[1].strip()
-                else:
-                    models = PROVIDER_MODELS.get(new_provider, [])
-                    if models:
-                        config.model = models[0]
-                config.save()
-                await agent.initialize()
-                ui.console.print(Text(f"  ✓ Switched to: {config.provider}/{config.model}", style="bold green"))
-            else:
+            prov = parts[0].lower()
+            if prov not in VALID_PROVIDERS:
                 ui.console.print(Text(f"  Valid: {', '.join(VALID_PROVIDERS)}", style="red"))
+                return False
+            ek = _EK.get(prov)
+            if ek and not os.environ.get(ek):
+                ui.console.print(Text(f"\n  ✗ {ek} not set. Type your API key below (Enter to cancel):\n", style="bold red"))
+                agent._switch_pending = {"step": "enter_key", "provider": prov, "env_key": ek, "model": parts[1].strip() if len(parts) > 1 else None, "pm": _PM}
+                return False
+            config.provider = prov
+            config.model = parts[1].strip() if len(parts) > 1 else (_PM.get(prov, [""])[0])
+            config.save()
+            await agent.initialize()
+            ui.console.print(Text(f"  ✓ Switched to: {config.provider}/{config.model}", style="bold green"))
         else:
             ui.console.print(Text(f"\n  Current: {config.provider}/{config.model}\n", style="bold cyan"))
-            providers = list(PROVIDER_MODELS.keys())
-            for i, p in enumerate(providers, 1):
+            provs = list(_PM.keys())
+            for i, p in enumerate(provs, 1):
                 marker = " ◀ current" if p == config.provider else ""
-                key_status = ""
-                env_key = ENV_KEYS.get(p)
-                if env_key:
-                    key_status = " ✓" if os.environ.get(env_key) else " ✗ no key"
+                ek = _EK.get(p)
+                ks = (" ✓" if os.environ.get(ek) else " ✗ no key") if ek else ""
                 line = Text()
                 line.append(f"  [{i}] ", style="bold cyan")
                 line.append(f"{p}", style="bold white")
-                line.append(key_status, style="green" if "✓" in key_status else "red")
+                line.append(ks, style="green" if "✓" in ks else "red")
                 line.append(marker, style="bold green")
                 ui.console.print(line)
-            ui.console.print()
-            try:
-                choice = _safe_input(ui.console, "[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
-                if choice is None:
-                    ui.console.print(Text("  Cancelled.", style="dim"))
-                    return False
-                choice = choice.strip()
-                if not choice:
-                    return False
-                if choice.isdigit() and 1 <= int(choice) <= len(providers):
-                    selected_provider = providers[int(choice) - 1]
-                elif choice.lower() in VALID_PROVIDERS:
-                    selected_provider = choice.lower()
-                else:
-                    ui.console.print(Text("  Cancelled.", style="dim"))
-                    return False
-
-                env_key = ENV_KEYS.get(selected_provider)
-                if env_key and not os.environ.get(env_key):
-                    ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
-                    try:
-                        key_input = _safe_input(ui.console, f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
-                        if key_input is None:
-                            return False
-                        key_input = key_input.strip()
-                        if not key_input:
-                            ui.console.print(Text("  Cancelled.", style="dim"))
-                            return False
-                        os.environ[env_key] = key_input
-                        try:
-                            from zer0code.credentials import CredentialManager
-                            cm = CredentialManager()
-                            cm.set(env_key, key_input)
-                        except Exception:
-                            pass
-                        ui.console.print(Text(f"  ✓ API key saved.", style="bold green"))
-                    except (EOFError, KeyboardInterrupt):
-                        ui.console.print(Text("  Cancelled.", style="dim"))
-                        return False
-
-                models = PROVIDER_MODELS.get(selected_provider, [])
-                ui.console.print(Text(f"\n  Models for {selected_provider}:\n", style="bold cyan"))
-                for i, m in enumerate(models, 1):
-                    marker = " ◀ current" if m == config.model else ""
-                    line = Text()
-                    line.append(f"  [{i}] ", style="bold cyan")
-                    line.append(f"{m}", style="bold white")
-                    line.append(marker, style="bold green")
-                    ui.console.print(line)
-                ui.console.print()
-
-                model_choice = _safe_input(ui.console, "[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
-                if model_choice is None:
-                    model_choice = ""
-                model_choice = model_choice.strip()
-                if model_choice.isdigit() and 1 <= int(model_choice) <= len(models):
-                    selected_model = models[int(model_choice) - 1]
-                elif model_choice:
-                    selected_model = model_choice
-                else:
-                    selected_model = models[0] if models else config.model
-
-                config.provider = selected_provider
-                config.model = selected_model
-                config.save()
-                await agent.initialize()
-                ui.console.print(Text(f"\n  ✓ Switched to: {config.provider}/{config.model}\n", style="bold green"))
-            except (EOFError, KeyboardInterrupt):
-                ui.console.print(Text("  Cancelled.", style="dim"))
+            ui.console.print(Text(f"\n  Type a number below (Enter to cancel):\n", style="dim"))
+            agent._switch_pending = {"step": "select_provider", "providers": provs, "pm": _PM, "ek": _EK}
 
     elif cmd == "/theme":
         if args:
@@ -1046,17 +951,115 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         vi_mode=vi_mode,
     )
 
+    agent._switch_pending = None
+
     while True:
         try:
+            pending = getattr(agent, '_switch_pending', None)
+            if pending:
+                if pending["step"] == "select_provider":
+                    ptxt = "select ❯ "
+                elif pending["step"] == "enter_key":
+                    ptxt = "key ❯ "
+                elif pending["step"] == "select_model":
+                    ptxt = "model ❯ "
+                else:
+                    ptxt = "❯ "
+            else:
+                ptxt = "❯ "
+
             console.print(Text("─" * width, style="dim"))
             user_input = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: session.prompt(
-                    [("class:prompt", "❯ ")],
+                lambda pt=ptxt: session.prompt(
+                    [("class:prompt", pt)],
                     style=None,
                 ),
             )
             console.print(Text("─" * width, style="dim"))
+
+            if not user_input or not user_input.strip():
+                if agent._switch_pending:
+                    agent._switch_pending = None
+                    console.print(Text("  Cancelled.", style="dim"))
+                continue
+
+            user_input = user_input.strip()
+
+            if agent._switch_pending:
+                sp = agent._switch_pending
+                if sp["step"] == "select_provider":
+                    provs = sp["providers"]
+                    _PM = sp["pm"]
+                    _EK = sp["ek"]
+                    sel = None
+                    if user_input.isdigit() and 1 <= int(user_input) <= len(provs):
+                        sel = provs[int(user_input) - 1]
+                    elif user_input.lower() in VALID_PROVIDERS:
+                        sel = user_input.lower()
+                    if not sel:
+                        agent._switch_pending = None
+                        console.print(Text("  Cancelled.", style="dim"))
+                        continue
+                    ek = _EK.get(sel)
+                    if ek and not os.environ.get(ek):
+                        console.print(Text(f"\n  ✗ {ek} not set. Type your API key (Enter to cancel):\n", style="bold red"))
+                        agent._switch_pending = {"step": "enter_key", "provider": sel, "env_key": ek, "model": None, "pm": _PM}
+                    else:
+                        models = _PM.get(sel, [])
+                        console.print(Text(f"\n  Models for {sel}:\n", style="bold cyan"))
+                        for i, m in enumerate(models, 1):
+                            mk = " ◀" if m == config.model else ""
+                            ln = Text()
+                            ln.append(f"  [{i}] ", style="bold cyan")
+                            ln.append(m, style="bold white")
+                            ln.append(mk, style="bold green")
+                            console.print(ln)
+                        console.print(Text(f"\n  Type number (Enter for default):\n", style="dim"))
+                        agent._switch_pending = {"step": "select_model", "provider": sel, "models": models}
+                    continue
+
+                elif sp["step"] == "enter_key":
+                    os.environ[sp["env_key"]] = user_input
+                    try:
+                        from zer0code.credentials import CredentialManager
+                        CredentialManager().set(sp["env_key"], user_input)
+                    except Exception:
+                        pass
+                    console.print(Text("  ✓ API key saved.", style="bold green"))
+                    prov = sp["provider"]
+                    if sp.get("model"):
+                        config.provider = prov
+                        config.model = sp["model"]
+                        config.save()
+                        await agent.initialize()
+                        console.print(Text(f"  ✓ Switched to: {config.provider}/{config.model}", style="bold green"))
+                        agent._switch_pending = None
+                    else:
+                        models = sp["pm"].get(prov, [])
+                        console.print(Text(f"\n  Models for {prov}:\n", style="bold cyan"))
+                        for i, m in enumerate(models, 1):
+                            ln = Text()
+                            ln.append(f"  [{i}] ", style="bold cyan")
+                            ln.append(m, style="bold white")
+                            console.print(ln)
+                        console.print(Text(f"\n  Type number (Enter for default):\n", style="dim"))
+                        agent._switch_pending = {"step": "select_model", "provider": prov, "models": models}
+                    continue
+
+                elif sp["step"] == "select_model":
+                    models = sp["models"]
+                    if user_input.isdigit() and 1 <= int(user_input) <= len(models):
+                        sel_model = models[int(user_input) - 1]
+                    else:
+                        sel_model = models[0] if models else config.model
+                    config.provider = sp["provider"]
+                    config.model = sel_model
+                    config.save()
+                    await agent.initialize()
+                    console.print(Text(f"\n  ✓ Switched to: {config.provider}/{config.model}\n", style="bold green"))
+                    agent._switch_pending = None
+                    continue
 
             if not user_input or not user_input.strip():
                 continue
@@ -1096,7 +1099,8 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             console.print(status_line)
 
         except KeyboardInterrupt:
-            ui.console.print(Text("\n  Operation cancelled.", style="yellow"))
+            agent._switch_pending = None
+            ui.console.print(Text("\n  Cancelled.", style="yellow"))
             continue
 
         except EOFError:
