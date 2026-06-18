@@ -14,6 +14,12 @@ from zer0code.providers import get_provider
 from zer0code.providers.base import BaseProvider, ProviderResponse
 from zer0code.session import SessionManager
 from zer0code.tools.base import BaseTool, ToolResult
+from zer0code.retry import RetryHandler, RetryConfig
+from zer0code.vision import VisionInput
+from zer0code.rollback import RollbackManager
+from zer0code.notifications import NotificationManager
+from zer0code.branching import ConversationBrancher
+from zer0code.export import SessionExporter
 
 
 SYSTEM_PROMPT = """You are ZER0CODE — an elite AI-powered penetration testing operator embedded in a terminal environment.
@@ -80,6 +86,13 @@ class ZeroCoreAgent:
         self._start_time = time.time()
         self._on_tool_call: Optional[Callable] = None
         self._on_tool_result: Optional[Callable] = None
+        self.retry_handler = RetryHandler()
+        self.rollback = RollbackManager()
+        self.notifications = NotificationManager()
+        self.brancher = ConversationBrancher()
+        self.exporter = SessionExporter()
+        self.token_budget: float = 0.0
+        self._context_max_tokens: int = 128000
 
     async def initialize(self):
         provider_config = self.config.get_provider_config()
@@ -185,6 +198,14 @@ class ZeroCoreAgent:
 
     async def execute_tool_call(self, tool_call: Dict[str, Any]) -> ToolResult:
         name = tool_call.get("name", "")
+        if name in ("write_file", "edit_file") and "file_path" in str(tool_call.get("arguments", "")):
+            try:
+                args_dict = json.loads(tool_call.get("arguments", "{}"))
+                fp = args_dict.get("file_path", args_dict.get("filePath", ""))
+                if fp:
+                    self.rollback.snapshot(fp)
+            except Exception:
+                pass
         try:
             arguments = json.loads(tool_call.get("arguments", "{}"))
         except json.JSONDecodeError:
@@ -280,7 +301,12 @@ class ZeroCoreAgent:
         return tool_messages
 
     async def run(self, user_input: str) -> str:
-        self.conversation_history.append({"role": "user", "content": user_input})
+        text, images = VisionInput.extract_images_from_text(user_input)
+        if images and VisionInput.supports_vision(self.config.model):
+            msg = VisionInput.build_message_with_images(text or user_input, images)
+        else:
+            msg = {"role": "user", "content": user_input}
+        self.conversation_history.append(msg)
         if self.session_manager and self.session_id:
             await self.session_manager.save_message(self.session_id, {"role": "user", "content": user_input})
 
@@ -289,6 +315,9 @@ class ZeroCoreAgent:
 
         max_iterations = 25
         iteration = 0
+
+        if self.token_budget > 0 and self.cost_tracker.total_cost >= self.token_budget:
+            return f"[ZER0CODE] Token budget (${self.token_budget:.2f}) exceeded. Current cost: {self.cost_tracker.format_cost()}"
 
         while iteration < max_iterations:
             iteration += 1
@@ -304,7 +333,8 @@ class ZeroCoreAgent:
             messages = self._get_messages()
             tool_schemas = self._get_tool_schemas()
 
-            response = await self.provider.chat(
+            response = await self.retry_handler.execute(
+                self.provider.chat,
                 messages=messages,
                 tools=tool_schemas if tool_schemas else None,
             )
@@ -439,3 +469,13 @@ class ZeroCoreAgent:
     @property
     def total_cost(self) -> str:
         return self.cost_tracker.format_cost()
+
+    @property
+    def context_window_usage(self) -> float:
+        total_chars = sum(len(str(m.get("content", ""))) for m in self.conversation_history)
+        estimated_tokens = total_chars // 4
+        return min(estimated_tokens / self._context_max_tokens, 1.0)
+
+    @property
+    def context_window_percent(self) -> int:
+        return int(self.context_window_usage * 100)

@@ -25,6 +25,7 @@ from zer0code.ui.diff import DiffRenderer
 from zer0code.tools import ALL_TOOLS
 from zer0code.tools.security import SECURITY_TOOLS
 from zer0code.tools.git import GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchTool
+from zer0code.branching import ConversationBrancher
 
 VALID_PROVIDERS = ["openai", "anthropic", "deepseek", "ollama"]
 
@@ -236,6 +237,244 @@ async def handle_slash_command(
                 else:
                     ui.console.print(Text(f"  Skill '{skill_name}' not found. Type /skill to list all.", style="red"))
 
+    elif cmd == "/persona":
+        from zer0code.personas import PersonaManager
+        pm = PersonaManager()
+        if args:
+            persona = pm.get_persona(args.strip())
+            if persona:
+                agent.conversation_history.append({"role": "system", "content": persona.system_prompt})
+                ui.console.print(Text(f"  Persona: {persona.title}", style="bold green"))
+                ui.console.print(Text(f"  {persona.description}", style="dim"))
+            else:
+                ui.console.print(Text(f"  Unknown persona. Available: {', '.join(pm.list_personas())}", style="red"))
+        else:
+            table = Table(title="Agent Personas", border_style="magenta")
+            table.add_column("Name", style="bold magenta")
+            table.add_column("Title", style="white")
+            table.add_column("Risk", style="dim")
+            for name in pm.list_personas():
+                p = pm.get_persona(name)
+                table.add_row(name, p.title, p.risk_tolerance)
+            ui.console.print(table)
+
+    elif cmd == "/template" or cmd == "/t":
+        from zer0code.templates import TemplateManager
+        tm = TemplateManager()
+        if not args:
+            table = Table(title="Prompt Templates", border_style="cyan")
+            table.add_column("Name", style="bold cyan", width=18)
+            table.add_column("Description", style="white")
+            for name, desc in tm.list_templates():
+                table.add_row(name, desc[:60])
+            ui.console.print(table)
+            ui.console.print(Text("  Usage: /template <name> <target>", style="dim"))
+        else:
+            parts = args.strip().split(maxsplit=1)
+            tpl_name = parts[0]
+            tpl_args = parts[1] if len(parts) > 1 else ""
+            rendered = tm.render(tpl_name, target=tpl_args, input=tpl_args)
+            if rendered:
+                ui.console.print(Text(f"  Running template: {tpl_name}", style="bold cyan"))
+                try:
+                    response = await agent.run(rendered)
+                    if response:
+                        ui.render_response(response)
+                except Exception as e:
+                    ui.render_error(str(e))
+            else:
+                ui.console.print(Text(f"  Template '{tpl_name}' not found.", style="red"))
+
+    elif cmd == "/proxy":
+        from zer0code.proxy import ProxyManager
+        pm = ProxyManager()
+        if args == "on" or args == "enable":
+            pm.enable()
+            ui.console.print(Text(f"  Proxy enabled: {pm.config.url}", style="bold green"))
+        elif args == "off" or args == "disable":
+            pm.disable()
+            ui.console.print(Text("  Proxy disabled.", style="bold green"))
+        elif args == "test":
+            ok, msg = await pm.test_connection()
+            style = "bold green" if ok else "red"
+            ui.console.print(Text(f"  {msg}", style=style))
+        else:
+            status = pm.status()
+            ui.console.print(Text(f"  Proxy: {'ACTIVE' if status['enabled'] else 'disabled'}", style="bold green" if status['enabled'] else "dim"))
+            if status['proxy_url']:
+                ui.console.print(Text(f"  URL: {status['proxy_url']}", style="dim"))
+
+    elif cmd == "/branch":
+        if not args or args == "list":
+            branches = agent.brancher.list_branches()
+            table = Table(title="Conversation Branches", border_style="cyan")
+            table.add_column("Name", style="bold cyan")
+            table.add_column("Messages", style="dim")
+            table.add_column("Parent", style="dim")
+            table.add_column("", style="bold green")
+            for b in branches:
+                marker = " <--" if b["current"] else ""
+                table.add_row(b["name"], str(b["messages"]), b["parent"], marker)
+            ui.console.print(table)
+        elif args.startswith("create "):
+            name = args[7:].strip()
+            created = agent.brancher.create_branch(name)
+            agent.brancher.switch_branch(created)
+            agent.conversation_history = agent.brancher.current_messages
+            ui.console.print(Text(f"  Branch created and switched to: {created}", style="bold green"))
+        elif args.startswith("switch "):
+            name = args[7:].strip()
+            if agent.brancher.switch_branch(name):
+                agent.conversation_history = agent.brancher.current_messages
+                ui.console.print(Text(f"  Switched to branch: {name}", style="bold green"))
+            else:
+                ui.console.print(Text(f"  Branch '{name}' not found.", style="red"))
+        elif args.startswith("merge "):
+            source = args[6:].strip()
+            if agent.brancher.merge_branch(source):
+                agent.conversation_history = agent.brancher.current_messages
+                ui.console.print(Text(f"  Merged '{source}' into current branch.", style="bold green"))
+            else:
+                ui.console.print(Text(f"  Merge failed.", style="red"))
+        elif args.startswith("delete "):
+            name = args[7:].strip()
+            if agent.brancher.delete_branch(name):
+                ui.console.print(Text(f"  Branch '{name}' deleted.", style="bold green"))
+            else:
+                ui.console.print(Text(f"  Cannot delete '{name}'.", style="red"))
+        else:
+            ui.console.print(Text("  Usage: /branch [list|create|switch|merge|delete] <name>", style="dim"))
+
+    elif cmd == "/export":
+        filepath = args.strip() if args else f"zer0code-report-{int(time.time())}.md"
+        fmt = "html" if filepath.endswith(".html") else "md"
+        metadata = {
+            "provider": config.provider, "model": config.model,
+            "session_id": agent.session_id,
+            "total_tokens": agent.total_tokens, "total_cost": agent.total_cost,
+        }
+        saved = agent.exporter.save(agent.conversation_history, filepath, format=fmt, metadata=metadata)
+        ui.console.print(Text(f"  Exported to: {saved}", style="bold green"))
+
+    elif cmd == "/undo" or cmd == "/rollback":
+        if args == "all":
+            restored = agent.rollback.rollback_all()
+            if restored:
+                ui.console.print(Text(f"  Restored {len(restored)} files.", style="bold green"))
+                for f in restored:
+                    ui.console.print(Text(f"    - {f}", style="dim"))
+            else:
+                ui.console.print(Text("  No changes to rollback.", style="dim"))
+        elif args == "list":
+            changes = agent.rollback.list_changes()
+            if changes:
+                for c in changes:
+                    ui.console.print(Text(f"  {c['filepath']}", style="white"))
+            else:
+                ui.console.print(Text("  No tracked changes.", style="dim"))
+        elif args:
+            if agent.rollback.rollback(args.strip()):
+                ui.console.print(Text(f"  Restored: {args.strip()}", style="bold green"))
+            else:
+                ui.console.print(Text(f"  No snapshot for: {args.strip()}", style="red"))
+        else:
+            ui.console.print(Text("  Usage: /undo [all|list|<filepath>]", style="dim"))
+
+    elif cmd == "/plugin":
+        from zer0code.plugins import PluginManager
+        pm = PluginManager()
+        if not args or args == "list":
+            pm.load_all()
+            plugins = pm.list_plugins()
+            if plugins:
+                table = Table(title="Plugins", border_style="magenta")
+                table.add_column("Name", style="bold magenta")
+                table.add_column("Version", style="dim")
+                table.add_column("Tools", style="cyan")
+                table.add_column("Description", style="white")
+                for p in plugins:
+                    table.add_row(p["name"], p["version"], str(p["tools"]), p["description"][:40])
+                ui.console.print(table)
+            else:
+                ui.console.print(Text("  No plugins installed. Dir: ~/.zer0code/plugins/", style="dim"))
+        elif args.startswith("create "):
+            name = args[7:].strip()
+            filepath = pm.create_template(name)
+            ui.console.print(Text(f"  Plugin template created: {filepath}", style="bold green"))
+        elif args == "load":
+            pm.load_all()
+            for tool in pm.get_all_tools():
+                agent.register_tool(tool)
+            ui.console.print(Text(f"  Loaded {pm.count} plugins with {len(pm.get_all_tools())} tools.", style="bold green"))
+
+    elif cmd == "/serve":
+        from zer0code.server import APIServer
+        if args == "stop":
+            ui.console.print(Text("  API server stopped.", style="bold green"))
+        elif args == "start" or not args:
+            srv = APIServer()
+            url = srv.start(agent=agent)
+            ui.console.print(Text(f"  API server running at {url}", style="bold green"))
+            ui.console.print(Text("  POST /api/chat | GET /api/health | GET /api/status", style="dim"))
+
+    elif cmd == "/budget":
+        if args:
+            try:
+                budget = float(args.strip().replace("$", ""))
+                agent.token_budget = budget
+                ui.console.print(Text(f"  Token budget set: ${budget:.2f}", style="bold green"))
+            except ValueError:
+                ui.console.print(Text("  Usage: /budget <amount> (e.g., /budget 5.00)", style="red"))
+        else:
+            if agent.token_budget > 0:
+                ui.console.print(Text(f"  Budget: ${agent.token_budget:.2f} | Spent: {agent.total_cost} | Remaining: ${max(0, agent.token_budget - agent.cost_tracker.total_cost):.4f}", style="dim"))
+            else:
+                ui.console.print(Text("  No budget set. Usage: /budget <amount>", style="dim"))
+
+    elif cmd == "/creds":
+        from zer0code.credentials import CredentialManager
+        cm = CredentialManager()
+        if not args or args == "list":
+            names = cm.list_names()
+            if names:
+                for n in names:
+                    ui.console.print(Text(f"  - {n}", style="cyan"))
+            else:
+                ui.console.print(Text("  No stored credentials.", style="dim"))
+        elif args.startswith("set "):
+            parts = args[4:].strip().split(maxsplit=1)
+            if len(parts) == 2:
+                cm.set(parts[0], parts[1])
+                ui.console.print(Text(f"  Credential '{parts[0]}' saved.", style="bold green"))
+            else:
+                ui.console.print(Text("  Usage: /creds set <name> <value>", style="dim"))
+        elif args.startswith("get "):
+            name = args[4:].strip()
+            val = cm.get(name)
+            if val:
+                ui.console.print(Text(f"  {name} = {val[:4]}{'*' * (len(val)-4)}", style="cyan"))
+            else:
+                ui.console.print(Text(f"  Credential '{name}' not found.", style="red"))
+        elif args.startswith("delete "):
+            name = args[7:].strip()
+            cm.delete(name)
+            ui.console.print(Text(f"  Credential '{name}' deleted.", style="bold green"))
+
+    elif cmd == "/lsp":
+        from zer0code.lsp import LSPClient
+        filepath = args.strip() if args else ""
+        if not filepath:
+            ui.console.print(Text("  Usage: /lsp <filepath> — get code diagnostics", style="dim"))
+        else:
+            diagnostics = await LSPClient.get_diagnostics_simple(filepath)
+            if diagnostics:
+                for d in diagnostics:
+                    sev = d.get("severity", "info")
+                    style = "red" if sev == "error" else "yellow" if sev == "warning" else "dim"
+                    ui.console.print(Text(f"  {d['file']}:{d['line']} [{sev}] {d['message']}", style=style))
+            else:
+                ui.console.print(Text(f"  No diagnostics for {filepath}", style="bold green"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -250,6 +489,7 @@ async def handle_slash_command(
             tokens=agent.total_tokens,
             memories=mem_count,
         )
+        ui.console.print(Text(f"  Context: {agent.context_window_percent}% used", style="dim"))
 
     elif cmd == "/exit" or cmd == "/quit":
         return True
@@ -267,6 +507,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") 
     )
 
     agent = ZeroCoreAgent(config)
+    agent.brancher.current_messages = agent.conversation_history
     agent.permissions = PermissionManager(
         confirm_callback=ui.confirm,
         auto_approve=False,
@@ -317,9 +558,18 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") 
         Text(f"  Session: {agent.session_id} | Type /help for commands\n", style="dim")
     )
 
+    from prompt_toolkit.completion import WordCompleter
+    slash_commands = WordCompleter([
+        "/help", "/clear", "/memory", "/tools", "/config", "/model", "/provider",
+        "/theme", "/compact", "/cost", "/session", "/skill", "/status", "/exit",
+        "/persona", "/template", "/proxy", "/branch", "/export", "/undo", "/rollback",
+        "/plugin", "/serve", "/budget", "/creds", "/lsp", "/quit",
+    ], sentence=True)
+
     session: PromptSession = PromptSession(
         history=FileHistory(str(get_history_path())),
         auto_suggest=AutoSuggestFromHistory(),
+        completer=slash_commands,
     )
 
     while True:

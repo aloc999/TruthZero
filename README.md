@@ -27,23 +27,34 @@
 
 ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of Claude Code, the adaptive learning of Hermes Agent, and a complete penetration testing toolkit — all in one tool.
 
-## What's New in v0.2.0
+## What's New in v0.3.0
 
-- MCP (Model Context Protocol) support
-- Git tools (status, diff, commit, log, branch)
-- Session persistence — save/resume conversations
-- Context compaction — automatic context window management
-- Permission system — confirms before dangerous actions
-- Loop detection — breaks out of repeated failing patterns
-- Cost/token tracking with real-time display
-- Project context files (.zer0code.md, AGENTS.md)
-- Hooks system with auto-lint after code edits
-- Subagent system for parallel task spawning
-- Diff display when editing files
-- TF-IDF semantic memory search
-- Episodic memory + adaptive strategy selection
-- Meta-cognitive confidence assessment
-- DeepSeek LLM provider (V3, R1, V4 Pro)
+**24 new features added:**
+
+- Image/vision input — analyze screenshots and images with vision-capable models
+- Streaming tool output — watch long-running tools (nmap, ffuf) in real-time
+- Extended thinking — support for o1/o3/R1 reasoning tokens
+- Session export — generate markdown/HTML penetration test reports from sessions
+- Rate limit retry — automatic exponential backoff on API errors
+- Context window indicator — see how full your context is (%)
+- Token budget — set a spending cap per session
+- Agent personas — switch between red-team, bug-hunter, code-reviewer, dfir, ctf-player modes
+- Proxy integration — route tool requests through Burp Suite / Caido
+- Undo/rollback — revert any file changes the agent made
+- Autocomplete — tab-completion for all slash commands
+- Prompt templates — 15 reusable templates for common pentesting tasks
+- Dockerfile — run ZER0CODE in a container with pentesting tools
+- CI/CD pipeline — GitHub Actions for testing and publishing
+- Config validation — catches invalid settings on load
+- 19 tests — pytest test suite for tools, memory, and config
+- Full-screen TUI — split-pane terminal view (experimental)
+- LSP integration — get code diagnostics from language servers
+- Conversation branching — fork conversations to try different approaches
+- Python plugin system — extend with custom tools via ~/.zer0code/plugins/
+- Desktop notifications — alerts when long tasks complete
+- API server mode — run as HTTP API at localhost:3117
+- Encrypted credential storage — secure local key management
+- Fuzzy search — autocomplete with history suggestions
 
 ---
 
@@ -192,6 +203,17 @@ zer0code sessions
 /compact    Compact conversation context
 /cost       Show token usage and cost
 /status     Show status bar
+/persona    Switch agent persona (red-team, bug-hunter, dfir, etc.)
+/template   Run a prompt template (/template scan-web target.com)
+/proxy      Configure Burp/Caido proxy (/proxy on|off|test)
+/branch     Fork conversations (/branch create|switch|list|merge)
+/export     Export session to report (/export report.html)
+/undo       Rollback file changes (/undo all|list|<file>)
+/plugin     Manage plugins (/plugin list|create|load)
+/serve      Start API server (/serve start|stop)
+/budget     Set token budget (/budget 5.00)
+/creds      Manage credentials (/creds set|get|list|delete)
+/lsp        Code diagnostics (/lsp <filepath>)
 /exit       Exit ZER0CODE
 ```
 
@@ -276,6 +298,16 @@ zer0code/
 ├── permissions.py        # Permission/risk management
 ├── session.py            # Session persistence (SQLite)
 ├── subagent.py           # Parallel subagent spawning
+├── export.py             # Session export to markdown/HTML reports
+├── personas.py           # Agent persona definitions and switching
+├── plugins.py            # Python plugin loader (~/.zer0code/plugins/)
+├── server.py             # HTTP API server (localhost:3117)
+├── credentials.py        # Encrypted credential storage
+├── templates.py          # Prompt template engine
+├── rollback.py           # File change undo/rollback tracking
+├── notifications.py      # Desktop notification integration
+├── lsp.py                # LSP client for code diagnostics
+├── branching.py          # Conversation branching/forking
 ├── providers/            # LLM provider integrations
 │   ├── openai_provider.py
 │   ├── anthropic_provider.py

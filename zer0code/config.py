@@ -40,6 +40,11 @@ class ZeroCodeConfig:
     auto_lint: bool = True
     mcp_servers: List[Dict] = field(default_factory=list)
     session_auto_save: bool = True
+    token_budget: float = 0.0
+    persona: str = "default"
+    notifications_enabled: bool = True
+    api_server_port: int = 3117
+    plugins_enabled: bool = True
 
     @property
     def api_key(self) -> Optional[str]:
