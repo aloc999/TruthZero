@@ -11,10 +11,10 @@
 
   ░▒▓█████████████████████████████████████████████████▓▒░
 
-              ⚡ AUTONOMOUS PENTESTING AGENT ⚡
+              ⚡ No tools Are Perfect ⚡
 ```
 
-### **Autonomous AI Coding Agent for Expert Penetration Testers**
+### **AI Coding Agent for Penetration Testing**
 
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -25,7 +25,7 @@
 
 ---
 
-ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of Claude Code, the adaptive learning of Hermes Agent, and a complete penetration testing toolkit — all in one tool.
+ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of Freedom, adaptive learning, and a complete penetration testing toolkit — all in one tool.
 
 ## What's New in v0.3.0
 
