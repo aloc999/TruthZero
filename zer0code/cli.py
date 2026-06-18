@@ -33,6 +33,10 @@ VALID_PROVIDERS = ["openai", "anthropic", "deepseek", "ollama"]
 GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchTool]
 
 
+class _PermissionPending(Exception):
+    def __init__(self, description):
+        self.description = description
+
 def _safe_input(console, prompt_text: str):
     return None
 
@@ -930,38 +934,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     def _confirm_handler(prompt_text):
         if _spinner[0]:
             _spinner[0].stop()
-        import sys
-        console.print()
-        console.print(Text(f"  ? {prompt_text}", style="bold yellow"))
-        sys.stdout.write("  Approve? (y/n): ")
-        sys.stdout.flush()
-        try:
-            import termios
-            fd = sys.stdin.fileno()
-            old = termios.tcgetattr(fd)
-            new = old[:]
-            new[3] = new[3] | termios.ECHO | termios.ICANON | termios.ISIG
-            termios.tcsetattr(fd, termios.TCSANOW, new)
-            answer = sys.stdin.readline().strip().lower()
-            termios.tcsetattr(fd, termios.TCSANOW, old)
-        except Exception:
-            try:
-                answer = input("").strip().lower()
-            except Exception:
-                answer = "n"
-        result = answer in ("y", "yes")
-        if result:
-            console.print(Text("  ✓ Approved", style="bold green"))
-        else:
-            console.print(Text("  ✗ Denied", style="dim red"))
-        if _spinner[0] and result:
-            _spinner[0].update("[bold green]  Continuing...")
-            _spinner[0].start()
-        return result
+        raise _PermissionPending(prompt_text)
 
     agent.permissions = PermissionManager(
         confirm_callback=_confirm_handler,
-        auto_approve=True,
+        auto_approve=False,
     )
 
     await agent.initialize()
@@ -1092,11 +1069,15 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     )
 
     agent._switch_pending = None
+    agent._permission_pending = None
 
     while True:
         try:
             pending = getattr(agent, '_switch_pending', None)
-            if pending:
+            perm = getattr(agent, '_permission_pending', None)
+            if perm:
+                ptxt = "approve (y/n) ❯ "
+            elif pending:
                 if pending["step"] == "select_provider":
                     ptxt = "select ❯ "
                 elif pending["step"] == "enter_key":
@@ -1122,9 +1103,24 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                 if agent._switch_pending:
                     agent._switch_pending = None
                     console.print(Text("  Cancelled.", style="dim"))
+                if agent._permission_pending:
+                    agent._permission_pending = None
+                    console.print(Text("  ✗ Denied.", style="dim red"))
                 continue
 
             user_input = user_input.strip()
+
+            if agent._permission_pending:
+                pp = agent._permission_pending
+                if user_input.lower() in ("y", "yes"):
+                    console.print(Text("  ✓ Approved", style="bold green"))
+                    agent.permissions.auto_approve = True
+                    agent._permission_pending = None
+                    user_input = pp["user_input"]
+                else:
+                    console.print(Text("  ✗ Denied — tool skipped.", style="dim red"))
+                    agent._permission_pending = None
+                    continue
 
             if agent._switch_pending:
                 sp = agent._switch_pending
@@ -1228,6 +1224,15 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                                 got_text = True
                             collected_text.append(chunk)
                     _spinner[0] = None
+            except _PermissionPending as pp:
+                _spinner[0] = None
+                console.print()
+                console.print(Text(f"  ? {pp.description}", style="bold yellow"))
+                console.print(Text(f"\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
+                if agent.conversation_history and agent.conversation_history[-1].get("role") == "user":
+                    agent.conversation_history.pop()
+                agent._permission_pending = {"description": pp.description, "user_input": user_input}
+                continue
             except Exception as e:
                 _spinner[0] = None
                 ui.render_error(str(e))
@@ -1256,9 +1261,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             status_line.append(" · ", style="dim")
             status_line.append(f"{task_elapsed:.1f}s", style="dim green")
             console.print(status_line)
+            agent.permissions.auto_approve = False
 
         except KeyboardInterrupt:
             agent._switch_pending = None
+            agent._permission_pending = None
             console.print(Text("\n\n  Session terminated. Stay sharp.\n", style="bold green"))
             break
 
