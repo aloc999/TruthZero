@@ -34,22 +34,11 @@ GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchToo
 
 
 def _safe_input(console, prompt_text: str):
-    import signal
-    result = None
-    got_cancel = []
-    def _sigint_handler(sig, frame):
-        got_cancel.append(True)
-        raise EOFError()
-    old_handler = signal.getsignal(signal.SIGINT)
     try:
-        signal.signal(signal.SIGINT, _sigint_handler)
-        result = console.input(prompt_text)
+        return console.input(prompt_text)
     except (KeyboardInterrupt, EOFError):
-        console.print(Text("  Cancelled.", style="dim"))
-        result = None
-    finally:
-        signal.signal(signal.SIGINT, old_handler)
-    return result
+        console.print()
+        return None
 
 
 def get_history_path() -> Path:
@@ -187,11 +176,8 @@ async def handle_slash_command(
                 if env_key and not os.environ.get(env_key):
                     ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
                     try:
-                        key_input = await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: _safe_input(ui.console, f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
-                        )
+                        key_input = _safe_input(ui.console, f"[bold cyan]  Enter your {new_provider.title()} API key: [/]")
                         if key_input is None:
-                            ui.console.print(Text("  Cancelled.", style="dim"))
                             return False
                         key_input = key_input.strip()
                         if not key_input:
@@ -237,9 +223,7 @@ async def handle_slash_command(
                 ui.console.print(line)
             ui.console.print()
             try:
-                choice = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _safe_input(ui.console, "[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
-                )
+                choice = _safe_input(ui.console, "[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
                 if choice is None:
                     ui.console.print(Text("  Cancelled.", style="dim"))
                     return False
@@ -258,11 +242,8 @@ async def handle_slash_command(
                 if env_key and not os.environ.get(env_key):
                     ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
                     try:
-                        key_input = await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: _safe_input(ui.console, f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
-                        )
+                        key_input = _safe_input(ui.console, f"[bold cyan]  Enter your {selected_provider.title()} API key: [/]")
                         if key_input is None:
-                            ui.console.print(Text("  Cancelled.", style="dim"))
                             return False
                         key_input = key_input.strip()
                         if not key_input:
@@ -291,9 +272,7 @@ async def handle_slash_command(
                     ui.console.print(line)
                 ui.console.print()
 
-                model_choice = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _safe_input(ui.console, "[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
-                )
+                model_choice = _safe_input(ui.console, "[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
                 if model_choice is None:
                     model_choice = ""
                 model_choice = model_choice.strip()
