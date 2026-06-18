@@ -220,7 +220,29 @@ class ZeroCoreAgent:
 
     def _get_messages(self) -> List[Dict[str, Any]]:
         system_msg = {"role": "system", "content": self._build_system_prompt()}
-        return [system_msg] + self.conversation_history
+        messages = [system_msg] + self.conversation_history
+        return self._sanitize_messages(messages)
+
+    def _sanitize_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        sanitized = []
+        for msg in messages:
+            m = dict(msg)
+            content = m.get("content")
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict):
+                        if block.get("type") == "text":
+                            text_parts.append(block.get("text", ""))
+                        elif block.get("type") == "image_url":
+                            text_parts.append("[image]")
+                    elif isinstance(block, str):
+                        text_parts.append(block)
+                m["content"] = "\n".join(text_parts) if text_parts else ""
+            elif content is None:
+                m["content"] = ""
+            sanitized.append(m)
+        return sanitized
 
     def _get_tool_schemas(self) -> List[Dict[str, Any]]:
         schemas = []
