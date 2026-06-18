@@ -72,6 +72,18 @@ class ZeroCodeConfig:
         mcp_servers = data.pop("mcp_servers", [])
 
         config = cls(security_tools=security_tools, mcp_servers=mcp_servers, **data)
+
+        project_config = cls._load_project_config()
+        if project_config:
+            for key, value in project_config.items():
+                if key == "security_tools" and isinstance(value, dict):
+                    for sk, sv in value.items():
+                        setattr(config.security_tools, sk, sv)
+                elif key == "mcp_servers" and isinstance(value, list):
+                    config.mcp_servers.extend(value)
+                elif hasattr(config, key):
+                    setattr(config, key, value)
+
         return config
 
     def save(self) -> None:
@@ -104,3 +116,17 @@ class ZeroCodeConfig:
             base["proxy"] = f"http://{self.security_tools.proxy_host}:{self.security_tools.proxy_port}"
 
         return base
+
+    @staticmethod
+    def _load_project_config() -> dict:
+        project_files = ["zer0code.json", "zer0code.jsonc", ".zer0code.json"]
+        for filename in project_files:
+            filepath = Path.cwd() / filename
+            if filepath.exists():
+                try:
+                    content = filepath.read_text()
+                    content = "\n".join(line for line in content.splitlines() if not line.strip().startswith("//"))
+                    return json.loads(content)
+                except Exception:
+                    continue
+        return {}

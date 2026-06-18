@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zer0code"
-version = "0.5.0"
+version = "0.6.0"
 description = "Autonomous AI Coding Agent for Expert Penetration Testers"
 readme = "README.md"
 license = {text = "MIT"}
@@ -43,6 +43,9 @@ dev = [
 ]
 crypto = [
     "cryptography>=42.0",
+]
+tui = [
+    "textual>=0.70.0",
 ]
 
 [project.scripts]

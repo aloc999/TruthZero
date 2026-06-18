@@ -98,3 +98,27 @@ class AutoLintHook:
         if results:
             return HookResult(proceed=True, message="\n".join(results))
         return HookResult(proceed=True)
+
+
+class AutoLSPHook:
+    @staticmethod
+    async def on_file_write(file_path: str = "", **kwargs) -> HookResult:
+        if not file_path:
+            return HookResult(proceed=True)
+
+        try:
+            from zer0code.lsp import LSPClient
+            diagnostics = await LSPClient.get_diagnostics_simple(file_path)
+            if diagnostics:
+                messages = []
+                for d in diagnostics[:5]:
+                    sev = d.get("severity", "info")
+                    msg = d.get("message", "")
+                    line = d.get("line", "?")
+                    messages.append(f"[{sev}] line {line}: {msg}")
+                if messages:
+                    return HookResult(proceed=True, message="LSP: " + "; ".join(messages))
+        except Exception:
+            pass
+
+        return HookResult(proceed=True)

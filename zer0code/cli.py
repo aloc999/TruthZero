@@ -880,6 +880,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                 tokens=agent.total_tokens,
                 memories=mem_count,
             )
+            ui.console.print(Text(f"  Context: {agent.context_window_percent}% | Messages: {agent.message_count}", style="dim"))
 
         except KeyboardInterrupt:
             ui.console.print(Text("\n  Operation cancelled.", style="yellow"))
@@ -897,15 +898,42 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         await session_mgr.close()
 
 
+async def _launch_tui(config: ZeroCodeConfig, resume: str = "") -> None:
+    from zer0code.tui_app import run_tui, HAS_TEXTUAL
+    if not HAS_TEXTUAL:
+        print("TUI mode requires 'textual'. Install: pip install zer0code[tui]")
+        print("Falling back to REPL mode...")
+        await interactive_session(config, resume_session=resume)
+        return
+
+    agent = ZeroCoreAgent(config)
+    await agent.initialize()
+    agent.register_tools(ALL_TOOLS)
+    agent.register_tools(SECURITY_TOOLS)
+    agent.register_tools(GIT_TOOLS)
+
+    session_mgr = SessionManager()
+    await session_mgr.init()
+    agent.session_manager = session_mgr
+
+    if resume:
+        await agent.load_session(resume)
+    else:
+        agent.session_id = await session_mgr.create_session(provider=config.provider, model=config.model)
+
+    run_tui(agent=agent, config=config)
+
+
 @click.group(invoke_without_command=True)
 @click.option("--provider", "-p", default=None, help="LLM provider")
 @click.option("--model", "-m", default=None, help="Model name")
 @click.option("--resume", "-r", default="", help="Resume session ID")
 @click.option("--continue-last", "-c", is_flag=True, default=False, help="Continue most recent session")
 @click.option("--print-mode", is_flag=True, default=False, help="Non-interactive mode, print output and exit")
+@click.option("--tui", is_flag=True, default=False, help="Launch full-screen TUI mode")
 @click.option("--theme", "-t", default=None, help="UI theme")
 @click.pass_context
-def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, theme: str) -> None:
+def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, tui: bool, theme: str) -> None:
     ctx.ensure_object(dict)
     config = ZeroCodeConfig.load()
     if provider:
@@ -930,7 +958,10 @@ def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_las
             pass
 
     if ctx.invoked_subcommand is None:
-        asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
+        if tui:
+            asyncio.run(_launch_tui(config, resume))
+        else:
+            asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
 
 
 @cli.command()
@@ -1040,6 +1071,13 @@ def version() -> None:
         f"\n  [bold green]{__codename__}[/] v{__version__}\n"
         f"  Autonomous AI Coding Agent for Penetration Testers\n"
     )
+
+
+@cli.command()
+@click.pass_context
+def tui(ctx: click.Context) -> None:
+    config = ctx.obj["config"]
+    asyncio.run(_launch_tui(config))
 
 
 def main() -> None:
