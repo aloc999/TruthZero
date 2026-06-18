@@ -628,6 +628,109 @@ async def handle_slash_command(
             table.add_row(k, str(v))
         ui.console.print(table)
 
+    elif cmd == "/init":
+        from zer0code.init_project import ProjectInitializer
+        pi = ProjectInitializer()
+        filepath = pi.save()
+        ui.console.print(Text(f"  Generated: {filepath}", style="bold green"))
+        content = Path(filepath).read_text()[:500]
+        ui.console.print(Text(content, style="dim"))
+        agent.project_context.load_instructions()
+        ui.console.print(Text("\n  Project context loaded into agent.", style="bold green"))
+
+    elif cmd == "/doctor":
+        from zer0code.doctor import Doctor
+        doc = Doctor()
+        results = await doc.run_all()
+        table = Table(title="System Health Check", border_style="cyan")
+        table.add_column("Check", style="bold cyan", width=18)
+        table.add_column("Status", width=6)
+        table.add_column("Detail", style="dim")
+        for check in results:
+            status = check["status"]
+            if status == "pass":
+                icon = Text("PASS", style="bold green")
+            elif status == "warn":
+                icon = Text("WARN", style="bold yellow")
+            else:
+                icon = Text("FAIL", style="bold red")
+            table.add_row(check["name"], icon, check["detail"])
+        ui.console.print(table)
+        ui.console.print(Text(f"\n  {doc.summary}", style="dim"))
+
+    elif cmd == "/login":
+        from zer0code.credentials import CredentialManager
+        cm = CredentialManager()
+        if not args:
+            ui.console.print(Text("  Set API keys interactively:", style="bold cyan"))
+            ui.console.print(Text("  /login openai <key>", style="dim"))
+            ui.console.print(Text("  /login anthropic <key>", style="dim"))
+            ui.console.print(Text("  /login deepseek <key>", style="dim"))
+            ui.console.print(Text("  Keys are stored encrypted in ~/.zer0code/credentials.enc", style="dim"))
+        else:
+            parts = args.strip().split(maxsplit=1)
+            if len(parts) == 2:
+                provider_name = parts[0].lower()
+                key_value = parts[1].strip()
+                env_map = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY"}
+                env_name = env_map.get(provider_name)
+                if env_name:
+                    cm.set(env_name, key_value)
+                    os.environ[env_name] = key_value
+                    ui.console.print(Text(f"  {provider_name} API key saved and activated.", style="bold green"))
+                else:
+                    ui.console.print(Text(f"  Unknown provider: {provider_name}", style="red"))
+            else:
+                ui.console.print(Text("  Usage: /login <provider> <api_key>", style="dim"))
+
+    elif cmd == "/approve":
+        if args:
+            tool_name = args.strip()
+            if agent.permissions:
+                agent.permissions.approve_tool_for_session(tool_name)
+                ui.console.print(Text(f"  Tool '{tool_name}' approved for this session.", style="bold green"))
+        else:
+            ui.console.print(Text("  Usage: /approve <tool_name> — auto-approve a tool for this session", style="dim"))
+            if agent.permissions:
+                approved = agent.permissions._approved_tools
+                if approved:
+                    ui.console.print(Text(f"  Currently approved: {', '.join(approved)}", style="dim"))
+
+    elif cmd == "/diff":
+        if not hasattr(agent, '_diff_approval'):
+            agent._diff_approval = False
+        agent._diff_approval = not agent._diff_approval
+        mode = "ON" if agent._diff_approval else "OFF"
+        ui.console.print(Text(f"  Diff approval: {mode} — {'edits require confirmation' if agent._diff_approval else 'edits apply automatically'}", style="bold green"))
+
+    elif cmd == "/turns":
+        if args:
+            try:
+                turns = int(args.strip())
+                agent.max_turns = max(1, min(turns, 100))
+                ui.console.print(Text(f"  Max turns set to: {agent.max_turns}", style="bold green"))
+            except ValueError:
+                ui.console.print(Text("  Usage: /turns <number> (1-100)", style="dim"))
+        else:
+            ui.console.print(Text(f"  Max turns: {agent.max_turns}", style="dim"))
+
+    elif cmd == "/files":
+        if agent.file_index:
+            if args:
+                results = agent.file_index.search(args.strip())
+                if results:
+                    for r in results[:20]:
+                        ui.console.print(Text(f"  {r}", style="dim"))
+                    ui.console.print(Text(f"  {len(results)} matches", style="dim"))
+                else:
+                    ui.console.print(Text(f"  No files matching '{args.strip()}'", style="dim"))
+            else:
+                tree = agent.file_index.get_tree()
+                ui.console.print(Text(tree, style="dim"))
+                ui.console.print(Text(f"\n  {agent.file_index.file_count} files indexed", style="dim"))
+        else:
+            ui.console.print(Text("  No file index available.", style="dim"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -653,7 +756,7 @@ async def handle_slash_command(
     return False
 
 
-async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") -> None:
+async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", print_mode: bool = False) -> None:
     ui = TerminalUI(
         config={"provider": config.provider, "model": config.model},
         theme_name=config.theme,
@@ -719,12 +822,16 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") 
         "/plugin", "/serve", "/budget", "/creds", "/lsp", "/quit",
         "/report", "/share", "/compare", "/update", "/cache", "/step",
         "/prompt", "/search", "/preview", "/env",
+        "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files",
     ], sentence=True)
+
+    vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
 
     session: PromptSession = PromptSession(
         history=FileHistory(str(get_history_path())),
         auto_suggest=AutoSuggestFromHistory(),
         completer=slash_commands,
+        vi_mode=vi_mode,
     )
 
     while True:
@@ -794,9 +901,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") 
 @click.option("--provider", "-p", default=None, help="LLM provider")
 @click.option("--model", "-m", default=None, help="Model name")
 @click.option("--resume", "-r", default="", help="Resume session ID")
+@click.option("--continue-last", "-c", is_flag=True, default=False, help="Continue most recent session")
+@click.option("--print-mode", is_flag=True, default=False, help="Non-interactive mode, print output and exit")
 @click.option("--theme", "-t", default=None, help="UI theme")
 @click.pass_context
-def cli(ctx: click.Context, provider: str, model: str, resume: str, theme: str) -> None:
+def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, theme: str) -> None:
     ctx.ensure_object(dict)
     config = ZeroCodeConfig.load()
     if provider:
@@ -807,8 +916,21 @@ def cli(ctx: click.Context, provider: str, model: str, resume: str, theme: str) 
         config.theme = theme
     ctx.obj["config"] = config
 
+    if continue_last:
+        import asyncio as _aio
+        async def _get_last():
+            mgr = SessionManager()
+            await mgr.init()
+            sessions = await mgr.list_sessions(limit=1)
+            await mgr.close()
+            return sessions[0].session_id if sessions else ""
+        try:
+            resume = _aio.run(_get_last())
+        except Exception:
+            pass
+
     if ctx.invoked_subcommand is None:
-        asyncio.run(interactive_session(config, resume_session=resume))
+        asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
 
 
 @cli.command()

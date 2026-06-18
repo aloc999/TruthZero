@@ -45,6 +45,7 @@ class ZeroCodeConfig:
     notifications_enabled: bool = True
     api_server_port: int = 3117
     plugins_enabled: bool = True
+    max_turns: int = 25
 
     @property
     def api_key(self) -> Optional[str]:

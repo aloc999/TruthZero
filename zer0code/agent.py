@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import os
 import time
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
@@ -20,6 +21,7 @@ from zer0code.rollback import RollbackManager
 from zer0code.notifications import NotificationManager
 from zer0code.branching import ConversationBrancher
 from zer0code.export import SessionExporter
+from zer0code.file_index import FileIndex
 
 
 SYSTEM_PROMPT = """You are ZER0CODE — an elite AI-powered penetration testing operator embedded in a terminal environment.
@@ -63,7 +65,13 @@ RESPONSE STYLE:
 
 {loop_warning}
 
-{confidence_assessment}"""
+{confidence_assessment}
+
+{file_tree_context}
+
+{git_context}
+
+{custom_prompt}"""
 
 
 class ZeroCoreAgent:
@@ -93,6 +101,11 @@ class ZeroCoreAgent:
         self.exporter = SessionExporter()
         self.token_budget: float = 0.0
         self._context_max_tokens: int = 128000
+        self.file_index: Optional[FileIndex] = None
+        self.max_turns: int = 25
+        self._step_mode: bool = False
+        self._custom_prompt: str = ""
+        self._diff_approval: bool = False
 
     async def initialize(self):
         provider_config = self.config.get_provider_config()
@@ -114,6 +127,11 @@ class ZeroCoreAgent:
         self.project_context.detect_tech_stack()
 
         self.hooks.register("post_tool", "auto_lint", AutoLintHook.on_file_write)
+
+        self.file_index = FileIndex(self.project_context.project_root or ".")
+        self.file_index.scan()
+        self._context_max_tokens = self.config.max_context_tokens
+        self.max_turns = getattr(self.config, 'max_turns', 25) or 25
 
     def register_tool(self, tool: BaseTool) -> None:
         instance = tool() if isinstance(tool, type) else tool
@@ -170,11 +188,34 @@ class ZeroCoreAgent:
             except Exception:
                 pass
 
+        file_tree_context = ""
+        if self.file_index and self.file_index.file_count > 0:
+            file_tree_context = self.file_index.get_context_prompt()
+
+        git_context = ""
+        try:
+            import asyncio, subprocess
+            branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, timeout=3, cwd=self.project_context.project_root or ".").stdout.strip()
+            status = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, timeout=3, cwd=self.project_context.project_root or ".").stdout.strip()
+            if branch:
+                git_context = f"GIT STATE:\n  Branch: {branch}"
+                if status:
+                    git_context += f"\n  Changed files:\n{status}"
+        except Exception:
+            pass
+
+        custom_prompt = ""
+        if self._custom_prompt:
+            custom_prompt = f"ADDITIONAL INSTRUCTIONS:\n{self._custom_prompt}"
+
         return SYSTEM_PROMPT.format(
             project_context=project_context,
             memory_context=memory_context,
             loop_warning=loop_warning,
             confidence_assessment=confidence_assessment,
+            file_tree_context=file_tree_context,
+            git_context=git_context,
+            custom_prompt=custom_prompt,
         )
 
     def _get_messages(self) -> List[Dict[str, Any]]:
@@ -204,6 +245,15 @@ class ZeroCoreAgent:
                 fp = args_dict.get("file_path", args_dict.get("filePath", ""))
                 if fp:
                     self.rollback.snapshot(fp)
+            except Exception:
+                pass
+        if self._diff_approval and name == "edit_file" and self._on_tool_call:
+            try:
+                args_dict = json.loads(tool_call.get("arguments", "{}"))
+                old_s = args_dict.get("old_string", "")[:200]
+                new_s = args_dict.get("new_string", "")[:200]
+                if old_s or new_s:
+                    pass
             except Exception:
                 pass
         try:
@@ -306,6 +356,30 @@ class ZeroCoreAgent:
             msg = VisionInput.build_message_with_images(text or user_input, images)
         else:
             msg = {"role": "user", "content": user_input}
+        if self.file_index and isinstance(msg.get("content"), str):
+            mentioned_files = []
+            words = msg["content"].split()
+            for word in words:
+                clean = word.strip("\"'`(),;:")
+                if "/" in clean or "." in clean:
+                    matches = self.file_index.search(clean)
+                    if matches:
+                        mentioned_files.extend(matches[:3])
+            if mentioned_files:
+                file_contents = []
+                for fp in mentioned_files[:5]:
+                    try:
+                        full_path = os.path.join(self.file_index.root, fp)
+                        if os.path.isfile(full_path) and os.path.getsize(full_path) < 50000:
+                            content = open(full_path, "r", errors="ignore").read()
+                            file_contents.append(f"[Auto-loaded: {fp}]\n```\n{content[:3000]}\n```")
+                    except Exception:
+                        pass
+                if file_contents:
+                    self.conversation_history.append({
+                        "role": "system",
+                        "content": "Relevant files auto-loaded:\n" + "\n\n".join(file_contents),
+                    })
         self.conversation_history.append(msg)
         if self.session_manager and self.session_id:
             await self.session_manager.save_message(self.session_id, {"role": "user", "content": user_input})
@@ -313,7 +387,7 @@ class ZeroCoreAgent:
         if self.compactor and self.compactor.needs_compaction(self.conversation_history):
             self.conversation_history = await self.compactor.compact(self.conversation_history)
 
-        max_iterations = 25
+        max_iterations = self.max_turns
         iteration = 0
 
         if self.token_budget > 0 and self.cost_tracker.total_cost >= self.token_budget:
@@ -382,7 +456,7 @@ class ZeroCoreAgent:
         if self.compactor and self.compactor.needs_compaction(self.conversation_history):
             self.conversation_history = await self.compactor.compact(self.conversation_history)
 
-        max_iterations = 25
+        max_iterations = self.max_turns
         iteration = 0
 
         while iteration < max_iterations:
