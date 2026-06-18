@@ -930,15 +930,38 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     def _confirm_handler(prompt_text):
         if _spinner[0]:
             _spinner[0].stop()
-        result = ui.confirm(prompt_text)
-        if _spinner[0]:
+        import sys
+        console.print()
+        console.print(Text(f"  ? {prompt_text}", style="bold yellow"))
+        sys.stdout.write("  Approve? (y/n): ")
+        sys.stdout.flush()
+        try:
+            import termios
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            new = old[:]
+            new[3] = new[3] | termios.ECHO | termios.ICANON | termios.ISIG
+            termios.tcsetattr(fd, termios.TCSANOW, new)
+            answer = sys.stdin.readline().strip().lower()
+            termios.tcsetattr(fd, termios.TCSANOW, old)
+        except Exception:
+            try:
+                answer = input("").strip().lower()
+            except Exception:
+                answer = "n"
+        result = answer in ("y", "yes")
+        if result:
+            console.print(Text("  ✓ Approved", style="bold green"))
+        else:
+            console.print(Text("  ✗ Denied", style="dim red"))
+        if _spinner[0] and result:
             _spinner[0].update("[bold green]  Continuing...")
             _spinner[0].start()
         return result
 
     agent.permissions = PermissionManager(
         confirm_callback=_confirm_handler,
-        auto_approve=False,
+        auto_approve=True,
     )
 
     await agent.initialize()
