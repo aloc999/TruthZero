@@ -1190,10 +1190,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             await agent.memory_store._db.close()
         except Exception:
             pass
-    import threading
-    for t in threading.enumerate():
-        if t is not threading.main_thread() and not t.daemon:
-            t.daemon = True
+    os._exit(0)
 
 
 def _launch_tui_sync(config: ZeroCodeConfig, resume: str = "") -> None:
