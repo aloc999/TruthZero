@@ -1185,11 +1185,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
         except KeyboardInterrupt:
             agent._switch_pending = None
-            ui.console.print(Text("\n  Cancelled.", style="yellow"))
-            continue
+            console.print(Text("\n\n  Session terminated. Stay sharp.\n", style="bold green"))
+            break
 
         except EOFError:
-            ui.console.print(Text("\n  Session terminated. Stay sharp.\n", style="bold green"))
+            console.print(Text("\n\n  Session terminated. Stay sharp.\n", style="bold green"))
             break
 
         except Exception as e:
