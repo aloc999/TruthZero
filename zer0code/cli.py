@@ -952,24 +952,44 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     diff_renderer = DiffRenderer()
 
     _last_file_path = [None]
+    _tool_timer = [0.0]
+    _task_start = [0.0]
+
+    def _ts():
+        from datetime import datetime
+        return datetime.now().strftime("%H:%M:%S")
 
     def on_tool_call(name, args):
+        _tool_timer[0] = time.time()
+        ts = _ts()
+        status = Text()
+        status.append(f"  {ts} ", style="dim")
+        status.append(f"◐ Running ", style="dim yellow")
+        status.append(f"{name}", style="bold magenta")
+        status.append(f"...", style="dim yellow")
+        ui.console.print(status)
         ui.render_tool_call(name, args)
         if name == "read_file":
             _last_file_path[0] = args.get("file_path", "")
 
     def on_tool_result(name, result, hook_messages=None):
+        elapsed = time.time() - _tool_timer[0] if _tool_timer[0] else 0
+        ts = _ts()
         display = result.output if result.success else (result.error or "Error")
         if len(display) > 2000:
             display = display[:1000] + f"\n... ({len(display)} chars total) ...\n" + display[-500:]
         ui.render_tool_result(name, display, result.success)
 
         tl = Text()
-        tl.append(f"  ↳ ", style="dim")
-        tl.append(f"{agent.total_tokens:,} tokens", style="dim cyan")
+        tl.append(f"  {ts} ", style="dim")
+        tl.append(f"↳ ", style="dim")
+        tl.append(f"{elapsed:.1f}s", style="dim green")
+        tl.append(f" · {agent.total_tokens:,} tokens", style="dim cyan")
         tl.append(f" · {agent.total_cost}", style="dim cyan")
         tl.append(f" · ctx: {agent.context_window_percent}%", style="dim cyan")
         ui.console.print(tl)
+
+        ui.console.print(Text(f"  {_ts()}  ◐ Analyzing results...", style="dim yellow"))
 
         if name == "read_file" and result.success and _last_file_path[0]:
             fp = _last_file_path[0]
@@ -1161,25 +1181,40 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                 continue
 
             console.print()
-            console.print(Text("  ◐ Thinking...", style="dim yellow"))
+            _task_start[0] = time.time()
+            console.print(Text(f"  {_ts()}  ◐ Thinking...", style="dim yellow"))
 
             collected_text = []
+            got_text = False
             try:
                 async for chunk in agent.run_stream(user_input):
                     if isinstance(chunk, str):
+                        if not got_text and collected_text == []:
+                            console.print(Text(f"  {_ts()}  ◐ Generating response...", style="dim yellow"))
+                        got_text = True
                         collected_text.append(chunk)
+                    elif isinstance(chunk, dict):
+                        ctype = chunk.get("type", "")
+                        if ctype == "tool_call":
+                            pass
+                        elif ctype == "tool_result":
+                            pass
             except Exception as e:
                 ui.render_error(str(e))
                 continue
 
+            task_elapsed = time.time() - _task_start[0]
+
             response = "".join(collected_text)
             if response:
+                console.print(Text(f"  {_ts()}  ✓ Done ({task_elapsed:.1f}s)", style="dim green"))
                 ui.render_response(response)
 
             persona = getattr(config, 'persona', 'default')
             status_line = Text()
             status_line.append(f"  [{persona}]", style="bold magenta")
-            padding = width - len(f"  [{persona}]") - len(f"{agent.total_tokens:,} tokens · {agent.total_cost} · ctx: {agent.context_window_percent}%") - 2
+            right = f"{agent.total_tokens:,} tokens · {agent.total_cost} · ctx: {agent.context_window_percent}% · {task_elapsed:.1f}s"
+            padding = width - len(f"  [{persona}]") - len(right) - 2
             status_line.append(" " * max(padding, 2))
             status_line.append(f"{agent.total_tokens:,} tokens", style="dim")
             status_line.append(" · ", style="dim")
@@ -1188,6 +1223,8 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             pct = agent.context_window_percent
             pct_style = "dim red" if pct > 80 else "dim yellow" if pct > 50 else "dim"
             status_line.append(f"ctx: {pct}%", style=pct_style)
+            status_line.append(" · ", style="dim")
+            status_line.append(f"{task_elapsed:.1f}s", style="dim green")
             console.print(status_line)
 
         except KeyboardInterrupt:
