@@ -964,6 +964,13 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             display = display[:1000] + f"\n... ({len(display)} chars total) ...\n" + display[-500:]
         ui.render_tool_result(name, display, result.success)
 
+        tl = Text()
+        tl.append(f"  ↳ ", style="dim")
+        tl.append(f"{agent.total_tokens:,} tokens", style="dim cyan")
+        tl.append(f" · {agent.total_cost}", style="dim cyan")
+        tl.append(f" · ctx: {agent.context_window_percent}%", style="dim cyan")
+        ui.console.print(tl)
+
         if name == "read_file" and result.success and _last_file_path[0]:
             fp = _last_file_path[0]
             if fp.endswith((".html", ".htm")):
