@@ -40,7 +40,7 @@ SLASH_COMMANDS = [
     "/help", "/clear", "/tools", "/status", "/config", "/model", "/provider",
     "/skill", "/persona", "/template", "/session", "/compact", "/cost",
     "/budget", "/export", "/undo", "/branch", "/doctor", "/init", "/files",
-    "/search", "/theme", "/step", "/exit", "/quit",
+    "/search", "/theme", "/step", "/exit", "/quit", "/copy",
 ]
 
 if HAS_TEXTUAL:
@@ -207,6 +207,7 @@ if HAS_TEXTUAL:
             Binding("ctrl+t", "toggle_dark", "Theme", show=True),
             Binding("ctrl+f", "search_conv", "Search", show=True),
             Binding("ctrl+s", "toggle_scroll", "Scroll", show=False),
+            Binding("ctrl+y", "copy_last", "Copy", show=True),
         ]
 
         show_panel = reactive(False)
@@ -274,7 +275,7 @@ if HAS_TEXTUAL:
             conv.write(info)
 
             tools_count = len(self.agent.tool_registry) if self.agent else 0
-            conv.write(Text(f"  {tools_count} tools  │  /help for commands  │  Ctrl+B side panel  │  Ctrl+F search", style="dim"))
+            conv.write(Text(f"  {tools_count} tools  │  /help for commands  │  Ctrl+B panel  │  Shift+drag to copy", style="dim"))
             conv.write(Text(""))
             conv.write(Text("  ─" * 35, style="dim"))
             conv.write(Text(""))
@@ -787,6 +788,9 @@ if HAS_TEXTUAL:
             elif command in ("/exit", "/quit"):
                 self.exit()
 
+            elif command == "/copy":
+                self.action_copy_last()
+
             else:
                 conv.write(Text(f"  Unknown: {command}  — type /help", style="yellow"))
 
@@ -849,6 +853,34 @@ if HAS_TEXTUAL:
             self.auto_scroll = not self.auto_scroll
             conv = self.query_one("#conversation", RichLog)
             conv.auto_scroll = self.auto_scroll
+
+        def action_copy_last(self) -> None:
+            if not self.agent:
+                return
+            last_response = ""
+            for msg in reversed(self.agent.conversation_history):
+                if msg.get("role") == "assistant" and msg.get("content"):
+                    last_response = msg["content"]
+                    break
+            if last_response:
+                import subprocess
+                import sys
+                try:
+                    if sys.platform == "darwin":
+                        subprocess.run(["pbcopy"], input=last_response.encode(), check=True)
+                    elif sys.platform == "linux":
+                        for cmd in ["xclip -selection clipboard", "xsel --clipboard --input", "wl-copy"]:
+                            try:
+                                subprocess.run(cmd.split(), input=last_response.encode(), check=True, capture_output=True)
+                                break
+                            except Exception:
+                                continue
+                    elif sys.platform == "win32":
+                        subprocess.run(["clip"], input=last_response.encode(), check=True)
+                except Exception:
+                    pass
+                conv = self.query_one("#conversation", RichLog)
+                conv.write(Text(f"  Copied {len(last_response)} chars to clipboard", style="bold green"))
 
         def _update_header(self) -> None:
             try:
