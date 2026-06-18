@@ -512,19 +512,24 @@ class ZeroCoreAgent:
 
             collected_text = []
             collected_tool_calls = []
+            stream_usage = {}
 
             async for chunk in self.provider.stream_chat(messages=messages, tools=tool_schemas if tool_schemas else None):
                 if isinstance(chunk, str):
                     collected_text.append(chunk)
                     yield chunk
                 elif isinstance(chunk, dict):
-                    collected_tool_calls.append(chunk)
+                    if chunk.get("type") == "usage":
+                        stream_usage = chunk
+                    else:
+                        collected_tool_calls.append(chunk)
 
             output_text = "".join(collected_text)
-            input_chars = sum(len(str(m.get("content", ""))) for m in messages)
-            est_input = max(input_chars // 4, 1)
-            est_output = max(len(output_text) // 4, 1)
-            self.cost_tracker.track(self.config.model, est_input, est_output)
+            if stream_usage:
+                self.cost_tracker.track(self.config.model, stream_usage.get("prompt_tokens", 0), stream_usage.get("completion_tokens", 0))
+            else:
+                input_chars = sum(len(str(m.get("content", ""))) for m in messages)
+                self.cost_tracker.track(self.config.model, max(input_chars // 4, 1), max(len(output_text) // 4, 1))
 
             if collected_tool_calls:
                 assistant_msg = {

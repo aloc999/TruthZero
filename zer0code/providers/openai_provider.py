@@ -40,6 +40,8 @@ class OpenAIProvider(BaseProvider):
             "messages": messages,
             "stream": stream,
         }
+        if stream:
+            payload["stream_options"] = {"include_usage": True}
         if tools:
             payload["tools"] = self.format_tools(tools)
         return payload
@@ -134,6 +136,7 @@ class OpenAIProvider(BaseProvider):
     ) -> AsyncGenerator[str | dict, None]:
         payload = self._build_payload(messages, tools, stream=True)
         tool_calls_buffer: dict[int, dict] = {}
+        usage_data: dict = {}
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
@@ -158,7 +161,9 @@ class OpenAIProvider(BaseProvider):
                             chunk = json.loads(data_str)
                         except json.JSONDecodeError:
                             continue
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        if chunk.get("usage"):
+                            usage_data = chunk["usage"]
+                        delta = chunk.get("choices", [{}])[0].get("delta", {}) if chunk.get("choices") else {}
                         if delta.get("content"):
                             yield delta["content"]
                         if delta.get("tool_calls"):
@@ -179,3 +184,6 @@ class OpenAIProvider(BaseProvider):
 
         for idx in sorted(tool_calls_buffer):
             yield tool_calls_buffer[idx]
+
+        if usage_data:
+            yield {"type": "usage", "prompt_tokens": usage_data.get("prompt_tokens", 0), "completion_tokens": usage_data.get("completion_tokens", 0)}
