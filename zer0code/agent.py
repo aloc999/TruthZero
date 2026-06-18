@@ -520,6 +520,12 @@ class ZeroCoreAgent:
                 elif isinstance(chunk, dict):
                     collected_tool_calls.append(chunk)
 
+            output_text = "".join(collected_text)
+            input_chars = sum(len(str(m.get("content", ""))) for m in messages)
+            est_input = max(input_chars // 4, 1)
+            est_output = max(len(output_text) // 4, 1)
+            self.cost_tracker.track(self.config.model, est_input, est_output)
+
             if collected_tool_calls:
                 assistant_msg = {
                     "role": "assistant",
