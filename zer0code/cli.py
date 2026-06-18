@@ -159,10 +159,16 @@ async def handle_slash_command(
             "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
             "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2"],
         }
+        ENV_KEYS = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "ollama": None}
         if args:
             parts = args.strip().split(maxsplit=1)
             new_provider = parts[0].lower()
             if new_provider in VALID_PROVIDERS:
+                env_key = ENV_KEYS.get(new_provider)
+                if env_key and not os.environ.get(env_key):
+                    ui.console.print(Text(f"  ✗ {env_key} not set. Run: export {env_key}=\"your-key\"", style="bold red"))
+                    ui.console.print(Text(f"  Or use /login {new_provider} <key>", style="dim"))
+                    return False
                 config.provider = new_provider
                 if len(parts) > 1:
                     config.model = parts[1].strip()
@@ -172,22 +178,76 @@ async def handle_slash_command(
                         config.model = models[0]
                 config.save()
                 await agent.initialize()
-                ui.console.print(Text(f"  Switched to: {config.provider}/{config.model}", style="bold green"))
+                ui.console.print(Text(f"  ✓ Switched to: {config.provider}/{config.model}", style="bold green"))
             else:
                 ui.console.print(Text(f"  Valid: {', '.join(VALID_PROVIDERS)}", style="red"))
         else:
             ui.console.print(Text(f"\n  Current: {config.provider}/{config.model}\n", style="bold cyan"))
-            table = Table(border_style="cyan", expand=False, show_header=True)
-            table.add_column("Provider", style="bold cyan", width=12)
-            table.add_column("Models", style="white")
-            table.add_column("", width=3)
-            for p, models in PROVIDER_MODELS.items():
-                marker = " ◀" if p == config.provider else ""
-                model_list = ", ".join(models)
-                table.add_row(p, model_list, Text(marker, style="bold green"))
-            ui.console.print(table)
-            ui.console.print(Text(f"\n  /switch <provider> [model]  — e.g. /switch deepseek deepseek-v4-pro", style="dim"))
-            ui.console.print(Text(f"  /switch openai              — switches to openai with default model\n", style="dim"))
+            providers = list(PROVIDER_MODELS.keys())
+            for i, p in enumerate(providers, 1):
+                marker = " ◀ current" if p == config.provider else ""
+                key_status = ""
+                env_key = ENV_KEYS.get(p)
+                if env_key:
+                    key_status = " ✓" if os.environ.get(env_key) else " ✗ no key"
+                line = Text()
+                line.append(f"  [{i}] ", style="bold cyan")
+                line.append(f"{p}", style="bold white")
+                line.append(key_status, style="green" if "✓" in key_status else "red")
+                line.append(marker, style="bold green")
+                ui.console.print(line)
+            ui.console.print()
+            try:
+                choice = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: ui.console.input("[bold cyan]  Select provider (1-4) or Enter to cancel: [/]")
+                )
+                choice = choice.strip()
+                if not choice:
+                    return False
+                if choice.isdigit() and 1 <= int(choice) <= len(providers):
+                    selected_provider = providers[int(choice) - 1]
+                elif choice.lower() in VALID_PROVIDERS:
+                    selected_provider = choice.lower()
+                else:
+                    ui.console.print(Text("  Cancelled.", style="dim"))
+                    return False
+
+                env_key = ENV_KEYS.get(selected_provider)
+                if env_key and not os.environ.get(env_key):
+                    ui.console.print(Text(f"\n  ✗ {env_key} not set.", style="bold red"))
+                    ui.console.print(Text(f"  Run: export {env_key}=\"your-key\"", style="dim"))
+                    ui.console.print(Text(f"  Or:  /login {selected_provider} <key>\n", style="dim"))
+                    return False
+
+                models = PROVIDER_MODELS.get(selected_provider, [])
+                ui.console.print(Text(f"\n  Models for {selected_provider}:\n", style="bold cyan"))
+                for i, m in enumerate(models, 1):
+                    marker = " ◀ current" if m == config.model else ""
+                    line = Text()
+                    line.append(f"  [{i}] ", style="bold cyan")
+                    line.append(f"{m}", style="bold white")
+                    line.append(marker, style="bold green")
+                    ui.console.print(line)
+                ui.console.print()
+
+                model_choice = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: ui.console.input("[bold cyan]  Select model (1-{}) or Enter for default: [/]".format(len(models)))
+                )
+                model_choice = model_choice.strip()
+                if model_choice.isdigit() and 1 <= int(model_choice) <= len(models):
+                    selected_model = models[int(model_choice) - 1]
+                elif model_choice:
+                    selected_model = model_choice
+                else:
+                    selected_model = models[0] if models else config.model
+
+                config.provider = selected_provider
+                config.model = selected_model
+                config.save()
+                await agent.initialize()
+                ui.console.print(Text(f"\n  ✓ Switched to: {config.provider}/{config.model}\n", style="bold green"))
+            except (EOFError, KeyboardInterrupt):
+                ui.console.print(Text("  Cancelled.", style="dim"))
 
     elif cmd == "/theme":
         if args:
@@ -886,20 +946,20 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     console.print()
     logo = Text()
-    logo.append("  ▐▛██▜▌   ", style="bold green")
+    logo.append("  ░▒▓█▓▒░  ", style="bold green")
     logo.append(f"ZER0CODE", style="bold green")
     logo.append(f" v{__version__}", style="dim")
     console.print(logo)
 
     line2 = Text()
-    line2.append("  ▝▜████▛▘  ", style="bold green")
+    line2.append("  ▓█████▓  ", style="bold green")
     line2.append(f"{config.model}", style="bold cyan")
     line2.append(" · ", style="dim")
     line2.append(f"{config.provider.title()} API", style="dim")
     console.print(line2)
 
     line3 = Text()
-    line3.append("    ▘▘ ▝▝   ", style="bold green")
+    line3.append("  ░▒▓█▓▒░  ", style="bold green")
     line3.append(os.getcwd(), style="dim")
     console.print(line3)
 
