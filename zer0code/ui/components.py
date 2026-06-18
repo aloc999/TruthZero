@@ -18,15 +18,17 @@ from rich.align import Align
 from zer0code.ui.themes import Theme, THEMES
 
 
-BANNER_ART = r"""
- __________ ____   ___   ____ ___  ____  _____
-|__  / ____|  _ \ / _ \ / ___/ _ \|  _ \| ____|
-  / /|  _| | |_) | | | | |  | | | | | | |  _|
- / /_| |___|  _ <| |_| | |__| |_| | |_| | |___
-/____|_____|_| \_\\___/ \____\___/|____/|_____|
-"""
+GRADIENT_BAR = "  ░▒▓█████████████████████████████████████████████████▓▒░"
 
-VERSION = "0.1.0"
+BANNER_LINES = [
+    "    █████ █████ ████   ███   ████  ███  ████  █████",
+    "       █  █     █   █ █   █ █     █   █ █   █ █    ",
+    "      █   ████  ████  █ ▀ █ █     █   █ █   █ ████ ",
+    "     █    █     █  █  █   █ █     █   █ █   █ █    ",
+    "    █████ █████ █   █  ███   ████  ███  ████  █████",
+]
+
+VERSION = "0.2.0"
 TAGLINE = "Autonomous Pentesting Agent"
 
 
@@ -37,34 +39,38 @@ class Banner:
         self.model = model
 
     def render(self, console: Console) -> None:
-        art_text = Text(BANNER_ART, style=self.theme.primary)
+        output = Text()
 
-        info_parts = []
-        version_text = Text(f"v{VERSION}", style=self.theme.accent)
-        info_parts.append(version_text)
+        output.append(f"\n{GRADIENT_BAR}\n\n", style="bold green")
 
-        tagline_text = Text(f"  {TAGLINE}", style=self.theme.muted)
-        info_parts.append(tagline_text)
+        for line in BANNER_LINES:
+            output.append(f"{line}\n", style="bold bright_green")
 
-        info_line = Text()
-        for part in info_parts:
-            info_line.append_text(part)
+        output.append(f"\n{GRADIENT_BAR}\n", style="bold green")
+
+        tagline = Text()
+        tagline.append("\n          \u26a1 ", style="bold yellow")
+        tagline.append(TAGLINE.upper(), style="bold cyan")
+        tagline.append(f"  v{VERSION}", style="dim white")
+        tagline.append("  \u26a1", style="bold yellow")
 
         provider_line = Text()
-        if self.provider:
-            provider_line.append("Provider: ", style=self.theme.muted)
-            provider_line.append(self.provider, style=self.theme.accent)
-        if self.model:
+        if self.provider or self.model:
+            provider_line.append("\n")
             if self.provider:
-                provider_line.append("  \u2502  ", style=self.theme.muted)
-            provider_line.append("Model: ", style=self.theme.muted)
-            provider_line.append(self.model, style=self.theme.accent)
+                provider_line.append("          Provider: ", style="dim")
+                provider_line.append(self.provider, style=self.theme.accent)
+            if self.model:
+                if self.provider:
+                    provider_line.append("  \u2502  ", style="dim")
+                provider_line.append("Model: ", style="dim")
+                provider_line.append(self.model, style=self.theme.accent)
 
-        content = Group(art_text, info_line, provider_line)
+        content = Group(output, tagline, provider_line)
 
         panel = Panel(
             content,
-            border_style=self.theme.border,
+            border_style="bright_green",
             padding=(0, 2),
             expand=False,
         )
