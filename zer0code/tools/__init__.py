@@ -9,6 +9,11 @@ from zer0code.tools.deps import DepsScanTool
 from zer0code.tools.clipboard import ClipboardReadTool, ClipboardWriteTool
 from zer0code.tools.search_replace import SearchReplaceTool
 from zer0code.tools.github import GitHubPRTool, GitHubIssueTool
+from zer0code.tools.burp import BurpImportTool, BurpExportTool
+from zer0code.tools.js_analysis import JSAnalysisTool
+from zer0code.tools.crawler import CrawlerTool
+from zer0code.tools.screenshot import ScreenshotTool
+from zer0code.tools.nuclei_mgr import NucleiManagerTool
 
 ALL_TOOLS = [
     BashTool,
@@ -31,4 +36,10 @@ ALL_TOOLS = [
     SearchReplaceTool,
     GitHubPRTool,
     GitHubIssueTool,
+    BurpImportTool,
+    BurpExportTool,
+    JSAnalysisTool,
+    CrawlerTool,
+    ScreenshotTool,
+    NucleiManagerTool,
 ]

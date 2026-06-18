@@ -810,6 +810,77 @@ async def handle_slash_command(
         else:
             ui.console.print(Text("  No file index available.", style="dim"))
 
+    elif cmd == "/scope":
+        if not hasattr(agent, '_scope'):
+            from zer0code.scope import ScopeManager
+            agent._scope = ScopeManager()
+            agent._scope.load_from_file()
+        if not args:
+            ui.console.print(Text(agent._scope.format_display(), style="white"))
+        elif args.startswith("add "):
+            target = args[4:].strip()
+            agent._scope.add_in_scope(target)
+            ui.console.print(Text(f"  ✓ Added to scope: {target}", style="bold green"))
+        elif args.startswith("exclude "):
+            target = args[8:].strip()
+            agent._scope.add_out_of_scope(target)
+            ui.console.print(Text(f"  ✓ Excluded: {target}", style="bold red"))
+        elif args.startswith("wildcard "):
+            domain = args[9:].strip()
+            agent._scope.add_wildcard(domain)
+            ui.console.print(Text(f"  ✓ Wildcard added: *.{domain.lstrip('*.')}", style="bold green"))
+        elif args == "save":
+            agent._scope.save_to_file()
+            ui.console.print(Text("  ✓ Scope saved to scope.json", style="bold green"))
+        elif args == "load":
+            if agent._scope.load_from_file():
+                ui.console.print(Text("  ✓ Scope loaded from scope.json", style="bold green"))
+            else:
+                ui.console.print(Text("  ✗ No scope.json found", style="red"))
+        elif args.startswith("check "):
+            target = args[6:].strip()
+            in_scope = agent._scope.is_in_scope(target)
+            style = "bold green" if in_scope else "bold red"
+            status = "IN SCOPE" if in_scope else "OUT OF SCOPE"
+            ui.console.print(Text(f"  {target}: {status}", style=style))
+        else:
+            ui.console.print(Text("  Usage: /scope [add|exclude|wildcard|check|save|load] <target>", style="dim"))
+
+    elif cmd == "/workflow" or cmd == "/wf":
+        from zer0code.workflows import WorkflowRunner, WORKFLOWS
+        if not args:
+            table = Table(title="Bug Bounty Workflows", border_style="magenta")
+            table.add_column("Name", style="bold magenta", width=20)
+            table.add_column("Description", style="white")
+            table.add_column("Steps", style="dim", width=6)
+            for key, wf in WORKFLOWS.items():
+                table.add_row(key, wf["description"][:50], str(len(wf["steps"])))
+            ui.console.print(table)
+            ui.console.print(Text("\n  /workflow <name> <target>  — e.g. /workflow full-recon target.com\n", style="dim"))
+        else:
+            parts = args.strip().split(maxsplit=1)
+            wf_name = parts[0]
+            target = parts[1] if len(parts) > 1 else ""
+            if wf_name not in WORKFLOWS:
+                ui.console.print(Text(f"  Unknown workflow: {wf_name}", style="red"))
+            elif not target:
+                wf = WORKFLOWS[wf_name]
+                ui.console.print(Text(f"\n  {wf['name']}: {wf['description']}\n", style="bold magenta"))
+                for i, step in enumerate(wf["steps"], 1):
+                    ui.console.print(Text(f"  {i}. {step}", style="dim"))
+                ui.console.print(Text(f"\n  /workflow {wf_name} <target> to run\n", style="dim"))
+            else:
+                if hasattr(agent, '_scope') and agent._scope.enabled and not agent._scope.is_in_scope(target):
+                    ui.console.print(Text(f"  ✗ {target} is OUT OF SCOPE", style="bold red"))
+                else:
+                    runner = WorkflowRunner(agent=agent)
+                    ui.console.print(Text(f"\n  Running: {WORKFLOWS[wf_name]['name']} on {target}\n", style="bold magenta"))
+                    try:
+                        result = await runner.run(wf_name, target)
+                        ui.render_response(result)
+                    except Exception as e:
+                        ui.render_error(str(e))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -940,6 +1011,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         "/report", "/share", "/compare", "/update", "/cache", "/step",
         "/prompt", "/search", "/preview", "/env",
         "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files", "/switch",
+        "/scope", "/workflow", "/wf",
     ], sentence=True)
 
     vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
