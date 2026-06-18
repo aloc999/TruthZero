@@ -96,17 +96,44 @@ async def handle_slash_command(
         ui.console.print(table)
 
     elif cmd == "/model":
+        PROVIDER_MODELS = {
+            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini"],
+            "anthropic": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
+            "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
+            "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2", "codellama"],
+        }
         if args:
             config.model = args.strip()
             config.save()
             await agent.initialize()
             ui.console.print(Text(f"  Model switched to: {config.model}", style="bold green"))
         else:
-            ui.console.print(Text(f"  Current model: {config.model}", style="dim"))
+            models = PROVIDER_MODELS.get(config.provider, [])
+            table = Table(title=f"Models ({config.provider})", border_style="cyan", expand=False)
+            table.add_column("#", style="bold cyan", width=4)
+            table.add_column("Model", style="white")
+            table.add_column("", style="bold green", width=3)
+            for i, m in enumerate(models, 1):
+                marker = " ◀" if m == config.model else ""
+                table.add_row(str(i), m, marker)
+            ui.console.print(table)
+            ui.console.print(Text(f"  /model <name> or /model <number> to switch", style="dim"))
+            if args and args.strip().isdigit():
+                idx = int(args.strip()) - 1
+                if 0 <= idx < len(models):
+                    config.model = models[idx]
+                    config.save()
+                    await agent.initialize()
+                    ui.console.print(Text(f"  Model switched to: {config.model}", style="bold green"))
 
     elif cmd == "/provider":
         if args:
             provider = args.strip().lower()
+            if provider.isdigit():
+                idx = int(provider) - 1
+                providers = list(VALID_PROVIDERS)
+                if 0 <= idx < len(providers):
+                    provider = providers[idx]
             if provider in VALID_PROVIDERS:
                 config.provider = provider
                 config.save()
@@ -115,7 +142,52 @@ async def handle_slash_command(
             else:
                 ui.console.print(Text(f"  Valid providers: {', '.join(VALID_PROVIDERS)}", style="red"))
         else:
-            ui.console.print(Text(f"  Current provider: {config.provider} | Available: {', '.join(VALID_PROVIDERS)}", style="dim"))
+            table = Table(title="Providers", border_style="cyan", expand=False)
+            table.add_column("#", style="bold cyan", width=4)
+            table.add_column("Provider", style="white")
+            table.add_column("", style="bold green", width=3)
+            for i, p in enumerate(VALID_PROVIDERS, 1):
+                marker = " ◀" if p == config.provider else ""
+                table.add_row(str(i), p, marker)
+            ui.console.print(table)
+            ui.console.print(Text(f"  /provider <name> or /provider <number> to switch", style="dim"))
+
+    elif cmd == "/switch":
+        PROVIDER_MODELS = {
+            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini"],
+            "anthropic": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
+            "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
+            "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2"],
+        }
+        if args:
+            parts = args.strip().split(maxsplit=1)
+            new_provider = parts[0].lower()
+            if new_provider in VALID_PROVIDERS:
+                config.provider = new_provider
+                if len(parts) > 1:
+                    config.model = parts[1].strip()
+                else:
+                    models = PROVIDER_MODELS.get(new_provider, [])
+                    if models:
+                        config.model = models[0]
+                config.save()
+                await agent.initialize()
+                ui.console.print(Text(f"  Switched to: {config.provider}/{config.model}", style="bold green"))
+            else:
+                ui.console.print(Text(f"  Valid: {', '.join(VALID_PROVIDERS)}", style="red"))
+        else:
+            ui.console.print(Text(f"\n  Current: {config.provider}/{config.model}\n", style="bold cyan"))
+            table = Table(border_style="cyan", expand=False, show_header=True)
+            table.add_column("Provider", style="bold cyan", width=12)
+            table.add_column("Models", style="white")
+            table.add_column("", width=3)
+            for p, models in PROVIDER_MODELS.items():
+                marker = " ◀" if p == config.provider else ""
+                model_list = ", ".join(models)
+                table.add_row(p, model_list, Text(marker, style="bold green"))
+            ui.console.print(table)
+            ui.console.print(Text(f"\n  /switch <provider> [model]  — e.g. /switch deepseek deepseek-v4-pro", style="dim"))
+            ui.console.print(Text(f"  /switch openai              — switches to openai with default model\n", style="dim"))
 
     elif cmd == "/theme":
         if args:
@@ -809,10 +881,37 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     agent.set_callbacks(on_tool_call=on_tool_call, on_tool_result=on_tool_result)
 
-    ui.show_banner()
-    ui.console.print(
-        Text(f"  Session: {agent.session_id} | Type /help for commands\n", style="dim")
-    )
+    console = ui.console
+    width = console.width or 80
+
+    console.print()
+    logo = Text()
+    logo.append("  ▐▛██▜▌   ", style="bold green")
+    logo.append(f"ZER0CODE", style="bold green")
+    logo.append(f" v{__version__}", style="dim")
+    console.print(logo)
+
+    line2 = Text()
+    line2.append("  ▝▜████▛▘  ", style="bold green")
+    line2.append(f"{config.model}", style="bold cyan")
+    line2.append(" · ", style="dim")
+    line2.append(f"{config.provider.title()} API", style="dim")
+    console.print(line2)
+
+    line3 = Text()
+    line3.append("    ▘▘ ▝▝   ", style="bold green")
+    line3.append(os.getcwd(), style="dim")
+    console.print(line3)
+
+    console.print()
+    tools_count = len(agent.tool_registry)
+    hint = Text()
+    hint.append(f"   {tools_count} tools loaded", style="dim")
+    hint.append(" · ", style="dim")
+    hint.append("/switch", style="bold cyan")
+    hint.append(" to change model", style="dim")
+    console.print(hint)
+    console.print()
 
     from prompt_toolkit.completion import WordCompleter
     slash_commands = WordCompleter([
@@ -822,7 +921,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         "/plugin", "/serve", "/budget", "/creds", "/lsp", "/quit",
         "/report", "/share", "/compare", "/update", "/cache", "/step",
         "/prompt", "/search", "/preview", "/env",
-        "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files",
+        "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files", "/switch",
     ], sentence=True)
 
     vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
@@ -836,13 +935,15 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     while True:
         try:
+            console.print(Text("─" * width, style="dim"))
             user_input = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: session.prompt(
-                    [("class:prompt", f"zer0code"), ("", " > ")],
+                    [("class:prompt", "❯ ")],
                     style=None,
                 ),
             )
+            console.print(Text("─" * width, style="dim"))
 
             if not user_input or not user_input.strip():
                 continue
@@ -867,20 +968,19 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             if response:
                 ui.render_response(response)
 
-            mem_count = 0
-            if agent.memory_store:
-                try:
-                    stats = await agent.memory_store.get_stats()
-                    mem_count = sum(stats.values())
-                except Exception:
-                    pass
-            ui.show_status(
-                model=config.model,
-                provider=config.provider,
-                tokens=agent.total_tokens,
-                memories=mem_count,
-            )
-            ui.console.print(Text(f"  Context: {agent.context_window_percent}% | Messages: {agent.message_count}", style="dim"))
+            persona = getattr(config, 'persona', 'default')
+            status_line = Text()
+            status_line.append(f"  [{persona}]", style="bold magenta")
+            padding = width - len(f"  [{persona}]") - len(f"{agent.total_tokens:,} tokens · {agent.total_cost} · ctx: {agent.context_window_percent}%") - 2
+            status_line.append(" " * max(padding, 2))
+            status_line.append(f"{agent.total_tokens:,} tokens", style="dim")
+            status_line.append(" · ", style="dim")
+            status_line.append(f"{agent.total_cost}", style="dim")
+            status_line.append(" · ", style="dim")
+            pct = agent.context_window_percent
+            pct_style = "dim red" if pct > 80 else "dim yellow" if pct > 50 else "dim"
+            status_line.append(f"ctx: {pct}%", style=pct_style)
+            console.print(status_line)
 
         except KeyboardInterrupt:
             ui.console.print(Text("\n  Operation cancelled.", style="yellow"))
@@ -931,10 +1031,10 @@ def _launch_tui_sync(config: ZeroCodeConfig, resume: str = "") -> None:
 @click.option("--resume", "-r", default="", help="Resume session ID")
 @click.option("--continue-last", "-c", is_flag=True, default=False, help="Continue most recent session")
 @click.option("--print-mode", is_flag=True, default=False, help="Non-interactive mode, print output and exit")
-@click.option("--repl", is_flag=True, default=False, help="Launch classic REPL mode instead of TUI")
+@click.option("--tui", is_flag=True, default=False, help="Launch full-screen TUI mode (Ctrl+B panels, Textual app)")
 @click.option("--theme", "-t", default=None, help="UI theme")
 @click.pass_context
-def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, repl: bool, theme: str) -> None:
+def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_last: bool, print_mode: bool, tui: bool, theme: str) -> None:
     ctx.ensure_object(dict)
     config = ZeroCodeConfig.load()
     if provider:
@@ -959,10 +1059,10 @@ def cli(ctx: click.Context, provider: str, model: str, resume: str, continue_las
             pass
 
     if ctx.invoked_subcommand is None:
-        if repl or print_mode:
-            asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
-        else:
+        if tui:
             _launch_tui_sync(config, resume)
+        else:
+            asyncio.run(interactive_session(config, resume_session=resume, print_mode=print_mode))
 
 
 @cli.command()
