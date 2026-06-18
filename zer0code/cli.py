@@ -954,6 +954,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     _last_file_path = [None]
     _tool_timer = [0.0]
     _task_start = [0.0]
+    _spinner = [None]
 
     def _ts():
         from datetime import datetime
@@ -961,13 +962,10 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     def on_tool_call(name, args):
         _tool_timer[0] = time.time()
+        if _spinner[0]:
+            _spinner[0].stop()
         ts = _ts()
-        status = Text()
-        status.append(f"  {ts} ", style="dim")
-        status.append(f"◐ Running ", style="dim yellow")
-        status.append(f"{name}", style="bold magenta")
-        status.append(f"...", style="dim yellow")
-        ui.console.print(status)
+        console.print(Text(f"  {ts}  ◐ Running {name}...", style="dim yellow"))
         ui.render_tool_call(name, args)
         if name == "read_file":
             _last_file_path[0] = args.get("file_path", "")
@@ -987,9 +985,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         tl.append(f" · {agent.total_tokens:,} tokens", style="dim cyan")
         tl.append(f" · {agent.total_cost}", style="dim cyan")
         tl.append(f" · ctx: {agent.context_window_percent}%", style="dim cyan")
-        ui.console.print(tl)
+        console.print(tl)
 
-        ui.console.print(Text(f"  {_ts()}  ◐ Analyzing results...", style="dim yellow"))
+        if _spinner[0]:
+            _spinner[0].update(f"[bold green]  Analyzing results...")
+            _spinner[0].start()
 
         if name == "read_file" and result.success and _last_file_path[0]:
             fp = _last_file_path[0]
@@ -997,11 +997,11 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                 import webbrowser
                 abs_path = os.path.abspath(fp)
                 webbrowser.open(f"file://{abs_path}")
-                ui.console.print(Text(f"  ↗ Opened in browser: {fp}", style="bold cyan"))
+                console.print(Text(f"  ↗ Opened in browser: {fp}", style="bold cyan"))
 
         if hook_messages:
             for msg in hook_messages:
-                ui.console.print(Text(f"  [lint] {msg}", style="dim"))
+                console.print(Text(f"  [lint] {msg}", style="dim"))
 
     agent.set_callbacks(on_tool_call=on_tool_call, on_tool_result=on_tool_result)
 
@@ -1182,24 +1182,21 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
             console.print()
             _task_start[0] = time.time()
-            console.print(Text(f"  {_ts()}  ◐ Thinking...", style="dim yellow"))
 
             collected_text = []
             got_text = False
             try:
-                async for chunk in agent.run_stream(user_input):
-                    if isinstance(chunk, str):
-                        if not got_text and collected_text == []:
-                            console.print(Text(f"  {_ts()}  ◐ Generating response...", style="dim yellow"))
-                        got_text = True
-                        collected_text.append(chunk)
-                    elif isinstance(chunk, dict):
-                        ctype = chunk.get("type", "")
-                        if ctype == "tool_call":
-                            pass
-                        elif ctype == "tool_result":
-                            pass
+                with console.status("[bold green]  Thinking...", spinner="dots", spinner_style="green") as status:
+                    _spinner[0] = status
+                    async for chunk in agent.run_stream(user_input):
+                        if isinstance(chunk, str):
+                            if not got_text:
+                                status.update("[bold green]  Generating response...")
+                                got_text = True
+                            collected_text.append(chunk)
+                    _spinner[0] = None
             except Exception as e:
+                _spinner[0] = None
                 ui.render_error(str(e))
                 continue
 
