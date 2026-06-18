@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -475,6 +476,158 @@ async def handle_slash_command(
             else:
                 ui.console.print(Text(f"  No diagnostics for {filepath}", style="bold green"))
 
+    elif cmd == "/report":
+        from zer0code.reports import ReportGenerator
+        rg = ReportGenerator()
+        if not args:
+            templates = rg.list_templates()
+            table = Table(title="Report Templates", border_style="cyan")
+            table.add_column("Key", style="bold cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Description", style="dim")
+            for t in templates:
+                table.add_row(t["key"], t["name"], t["description"][:50])
+            ui.console.print(table)
+            ui.console.print(Text("  Usage: /report <template> [output_file]", style="dim"))
+        else:
+            parts = args.strip().split(maxsplit=1)
+            tpl = parts[0]
+            outfile = parts[1] if len(parts) > 1 else f"report-{tpl}-{int(time.time())}.md"
+            metadata = {"provider": config.provider, "model": config.model, "session_id": agent.session_id}
+            content = rg.generate(tpl, agent.conversation_history, metadata)
+            Path(outfile).write_text(content, encoding="utf-8")
+            ui.console.print(Text(f"  Report saved: {outfile}", style="bold green"))
+
+    elif cmd == "/share":
+        from zer0code.sharing import TeamSharing
+        ts = TeamSharing()
+        if args.startswith("export"):
+            outfile = args[7:].strip() if len(args) > 7 else f"zer0code-pack-{int(time.time())}.z0pack"
+            path = ts.export_pack(outfile)
+            ui.console.print(Text(f"  Pack exported: {path}", style="bold green"))
+        elif args.startswith("import"):
+            packfile = args[7:].strip()
+            result = ts.import_pack(packfile)
+            if "error" in result:
+                ui.console.print(Text(f"  {result['error']}", style="red"))
+            else:
+                ui.console.print(Text(f"  Imported {len(result['files'])} files, skipped {len(result['skipped'])}", style="bold green"))
+        else:
+            info = ts.list_exportable()
+            ui.console.print(Text(f"  Exportable: {info['skills']} skills, {info['plugins']} plugins, config: {info['config']}", style="dim"))
+            ui.console.print(Text("  Usage: /share export [file] | /share import <file>", style="dim"))
+
+    elif cmd == "/compare":
+        if not args:
+            ui.console.print(Text("  Usage: /compare <prompt> — sends to multiple models", style="dim"))
+        else:
+            from zer0code.compare import ModelComparator
+            from zer0code.providers import get_provider
+            mc = ModelComparator()
+            models = [
+                {"provider": "deepseek", "model": "deepseek-chat"},
+                {"provider": "openai", "model": "gpt-4o-mini"},
+            ]
+            ui.console.print(Text("  Comparing models...", style="dim"))
+            try:
+                results = await mc.compare(args, models, provider_factory=lambda p, **kw: get_provider(p, **kw, api_key=config.api_key or ""))
+                output = ModelComparator.format_results(results)
+                ui.render_response(output)
+            except Exception as e:
+                ui.render_error(str(e))
+
+    elif cmd == "/update":
+        from zer0code.updater import UpdateChecker
+        from zer0code import __version__
+        ui.console.print(Text("  Checking for updates...", style="dim"))
+        info = await UpdateChecker.check(__version__)
+        if info:
+            ui.console.print(Text(f"  {UpdateChecker.format_update_message(info)}", style="bold yellow"))
+        else:
+            ui.console.print(Text(f"  ZER0CODE v{__version__} is up to date.", style="bold green"))
+
+    elif cmd == "/cache":
+        if hasattr(agent, '_cache') and agent._cache:
+            stats = agent._cache.stats
+            ui.console.print(Text(f"  Cache: {stats['cached']} entries | Hit rate: {stats['hit_rate']} | Hits: {stats['hits']} | Misses: {stats['misses']}", style="dim"))
+        else:
+            ui.console.print(Text("  Cache not enabled.", style="dim"))
+
+    elif cmd == "/step":
+        if not hasattr(agent, '_step_mode'):
+            agent._step_mode = False
+        agent._step_mode = not agent._step_mode
+        mode = "ON" if agent._step_mode else "OFF"
+        ui.console.print(Text(f"  Step mode: {mode} — {'each tool call requires approval' if agent._step_mode else 'tools execute automatically'}", style="bold green"))
+
+    elif cmd == "/prompt":
+        if args:
+            agent._custom_prompt = args.strip()
+            ui.console.print(Text("  Custom system prompt set.", style="bold green"))
+        else:
+            if hasattr(agent, '_custom_prompt') and agent._custom_prompt:
+                ui.console.print(Text(f"  Current custom prompt: {agent._custom_prompt[:100]}...", style="dim"))
+            else:
+                ui.console.print(Text("  No custom prompt set. Usage: /prompt <additional instructions>", style="dim"))
+
+    elif cmd == "/search":
+        if not args:
+            ui.console.print(Text("  Usage: /search <keyword> — search conversation history", style="dim"))
+        else:
+            query = args.strip().lower()
+            matches = []
+            for i, m in enumerate(agent.conversation_history):
+                content = str(m.get("content", ""))
+                if query in content.lower():
+                    role = m.get("role", "?")
+                    snippet = content[:100].replace("\n", " ")
+                    matches.append(f"  [{i}] {role}: {snippet}")
+            if matches:
+                ui.console.print(Text(f"  Found {len(matches)} matches:", style="bold green"))
+                for m in matches[:15]:
+                    ui.console.print(Text(m, style="dim"))
+            else:
+                ui.console.print(Text(f"  No matches for '{args.strip()}'", style="dim"))
+
+    elif cmd == "/preview":
+        if args:
+            filepath = args.strip()
+            if filepath.endswith(".html") and os.path.exists(filepath):
+                import webbrowser
+                webbrowser.open(f"file://{os.path.abspath(filepath)}")
+                ui.console.print(Text(f"  Opened {filepath} in browser.", style="bold green"))
+            elif os.path.exists(filepath):
+                try:
+                    content = Path(filepath).read_text()[:2000]
+                    ui.render_response(content)
+                except Exception as e:
+                    ui.render_error(str(e))
+            else:
+                ui.console.print(Text(f"  File not found: {filepath}", style="red"))
+        else:
+            ui.console.print(Text("  Usage: /preview <filepath> — preview file or open HTML in browser", style="dim"))
+
+    elif cmd == "/env":
+        import shutil
+        env_info = {
+            "shell": os.environ.get("SHELL", "unknown"),
+            "user": os.environ.get("USER", "unknown"),
+            "home": os.environ.get("HOME", "unknown"),
+            "cwd": os.getcwd(),
+            "path_dirs": len(os.environ.get("PATH", "").split(":")),
+            "python": shutil.which("python3") or shutil.which("python") or "not found",
+            "git": shutil.which("git") or "not found",
+            "nmap": shutil.which("nmap") or "not found",
+            "ffuf": shutil.which("ffuf") or "not found",
+            "nuclei": shutil.which("nuclei") or "not found",
+        }
+        table = Table(title="Shell Environment", border_style="cyan")
+        table.add_column("Key", style="bold cyan")
+        table.add_column("Value", style="white")
+        for k, v in env_info.items():
+            table.add_row(k, str(v))
+        ui.console.print(table)
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -564,6 +717,8 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "") 
         "/theme", "/compact", "/cost", "/session", "/skill", "/status", "/exit",
         "/persona", "/template", "/proxy", "/branch", "/export", "/undo", "/rollback",
         "/plugin", "/serve", "/budget", "/creds", "/lsp", "/quit",
+        "/report", "/share", "/compare", "/update", "/cache", "/step",
+        "/prompt", "/search", "/preview", "/env",
     ], sentence=True)
 
     session: PromptSession = PromptSession(
