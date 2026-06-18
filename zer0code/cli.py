@@ -925,8 +925,19 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
     agent = ZeroCoreAgent(config)
     agent.brancher.current_messages = agent.conversation_history
+    _spinner = [None]
+
+    def _confirm_handler(prompt_text):
+        if _spinner[0]:
+            _spinner[0].stop()
+        result = ui.confirm(prompt_text)
+        if _spinner[0]:
+            _spinner[0].update("[bold green]  Continuing...")
+            _spinner[0].start()
+        return result
+
     agent.permissions = PermissionManager(
-        confirm_callback=ui.confirm,
+        confirm_callback=_confirm_handler,
         auto_approve=False,
     )
 
@@ -954,7 +965,6 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
     _last_file_path = [None]
     _tool_timer = [0.0]
     _task_start = [0.0]
-    _spinner = [None]
 
     def _ts():
         from datetime import datetime
