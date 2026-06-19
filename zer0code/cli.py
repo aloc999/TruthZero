@@ -1351,15 +1351,14 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             max_retries = 3
             for _retry in range(max_retries):
                 try:
-                    with console.status("[bold green]  Thinking...", spinner="dots", spinner_style="green") as status:
-                        _spinner[0] = status
-                        async for chunk in agent.run_stream(user_input):
-                            if isinstance(chunk, str):
-                                if not got_text:
-                                    status.update("[bold green]  Generating response...")
-                                    got_text = True
-                                collected_text.append(chunk)
-                        _spinner[0] = None
+                    console.print(Text(f"  {_ts()}  ⠋ Thinking...", style="dim yellow"))
+                    _spinner[0] = None
+                    async for chunk in agent.run_stream(user_input):
+                        if isinstance(chunk, str):
+                            if not got_text:
+                                console.print(Text(f"  {_ts()}  ⠹ Generating response...", style="dim yellow"))
+                                got_text = True
+                            collected_text.append(chunk)
                     break
                 except _PermissionPending as pp:
                     _spinner[0] = None
