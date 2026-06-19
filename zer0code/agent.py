@@ -560,6 +560,8 @@ class ZeroCoreAgent:
 
         if self.compactor and self.compactor.needs_compaction(self.conversation_history):
             self.conversation_history = await self.compactor.compact(self.conversation_history)
+        if self.context_window_usage > 0.8 and self.compactor:
+            self.conversation_history = await self.compactor.compact(self.conversation_history)
 
         max_iterations = self.max_turns
         iteration = 0

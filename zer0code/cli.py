@@ -1384,16 +1384,18 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                     _spinner[0] = None
                     agent.conversation_history = agent.conversation_history[:history_len]
                     err_str = str(e)
-                    if "maximum context length" in err_str or "token" in err_str.lower() and "reduce" in err_str.lower():
-                        if agent.compactor and _retry < max_retries - 1:
-                            old_len = len(agent.conversation_history)
-                            agent.conversation_history = await agent.compactor.compact(agent.conversation_history)
-                            new_len = len(agent.conversation_history)
-                            console.print(Text(f"  ⚠ Context too large. Auto-compacted: {old_len} → {new_len} messages. Retrying...", style="bold yellow"))
-                            collected_text = []
-                            got_text = False
-                            continue
-                    ui.render_error(err_str)
+                    is_ctx_overflow = "maximum context length" in err_str or ("token" in err_str.lower() and "reduce" in err_str.lower())
+                    if not err_str and agent.context_window_percent >= 80:
+                        is_ctx_overflow = True
+                    if is_ctx_overflow and agent.compactor and _retry < max_retries - 1:
+                        old_len = len(agent.conversation_history)
+                        agent.conversation_history = await agent.compactor.compact(agent.conversation_history)
+                        new_len = len(agent.conversation_history)
+                        console.print(Text(f"  ⚠ Context overflow. Auto-compacted: {old_len} → {new_len} messages. Retrying...", style="bold yellow"))
+                        collected_text = []
+                        got_text = False
+                        continue
+                    ui.render_error(err_str or "Unknown error (possibly context overflow — try /compact)")
                     break
             else:
                 continue
