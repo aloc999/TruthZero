@@ -1221,6 +1221,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
             console.print()
             _task_start[0] = time.time()
+            history_len = len(agent.conversation_history)
 
             collected_text = []
             got_text = False
@@ -1236,15 +1237,15 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
                     _spinner[0] = None
             except _PermissionPending as pp:
                 _spinner[0] = None
+                agent.conversation_history = agent.conversation_history[:history_len]
                 console.print()
                 console.print(Text(f"  ? {pp.description}", style="bold yellow"))
                 console.print(Text(f"\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
-                if agent.conversation_history and agent.conversation_history[-1].get("role") == "user":
-                    agent.conversation_history.pop()
                 agent._permission_pending = {"description": pp.description, "user_input": user_input}
                 continue
             except Exception as e:
                 _spinner[0] = None
+                agent.conversation_history = agent.conversation_history[:history_len]
                 ui.render_error(str(e))
                 continue
 
