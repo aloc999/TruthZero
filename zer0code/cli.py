@@ -885,6 +885,16 @@ async def handle_slash_command(
                     except Exception as e:
                         ui.render_error(str(e))
 
+    elif cmd == "/consolidate":
+        if agent.memory_store:
+            try:
+                count = await agent.memory_store.consolidate_memories()
+                ui.console.print(Text(f"  ✓ Consolidated {count} old memories", style="bold green"))
+            except Exception as e:
+                ui.console.print(Text(f"  Error: {e}", style="red"))
+        else:
+            ui.console.print(Text("  Memory not enabled.", style="dim"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -1244,6 +1254,13 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             if response:
                 console.print(Text(f"  {_ts()}  ✓ Done ({task_elapsed:.1f}s)", style="dim green"))
                 ui.render_response(response)
+                if agent.reflection:
+                    try:
+                        conf = agent.reflection.assess_confidence_detailed(agent.conversation_history)
+                        conf_style = "bold green" if conf["level"] == "HIGH" else "bold yellow" if conf["level"] == "MEDIUM" else "bold red"
+                        console.print(Text(f"  confidence: {conf['level']} ({conf['score']}%) — {conf['detail']}", style=conf_style))
+                    except Exception:
+                        pass
 
             persona = getattr(config, 'persona', 'default')
             status_line = Text()

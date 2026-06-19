@@ -297,3 +297,156 @@ class ReflectionEngine:
 
     def tag_project(self, project_root: str):
         self._current_project = project_root
+
+    async def proactive_warning(self, tool_name: str, args: dict) -> str:
+        patterns = await self.memory.get_tool_patterns(tool_name)
+        anti_patterns = [p for p in patterns if p.get("anti_pattern")]
+        if not anti_patterns:
+            return ""
+
+        warnings = []
+        args_str = str(args).lower()
+        for ap in anti_patterns[:5]:
+            anti = ap.get("anti_pattern", "")
+            if any(word in args_str for word in anti.lower().split()[:3] if len(word) > 3):
+                warnings.append(f"Warning: similar args previously failed — {anti[:100]}")
+
+        return "\n".join(warnings) if warnings else ""
+
+    async def root_cause_analysis(self, tool_name: str, error: str, args: dict, context: str) -> dict:
+        error_lower = error.lower()
+        root_causes = {
+            "timeout": "target_unresponsive",
+            "connection refused": "port_closed_or_filtered",
+            "permission denied": "insufficient_privileges",
+            "not found": "incorrect_path_or_target",
+            "401": "authentication_required",
+            "403": "access_forbidden",
+            "rate limit": "too_many_requests",
+            "dns": "dns_resolution_failed",
+            "ssl": "certificate_issue",
+            "syntax": "malformed_input",
+        }
+        root = "unknown"
+        for pattern, cause in root_causes.items():
+            if pattern in error_lower:
+                root = cause
+                break
+
+        result = {
+            "tool": tool_name,
+            "error": error[:200],
+            "root_cause": root,
+            "suggestion": self._suggest_fix(root, tool_name),
+        }
+
+        await self.memory.add_mistake(
+            context=context[:200],
+            error=error[:200],
+            lesson=f"Root cause: {root}. Fix: {result['suggestion']}",
+            category=f"root_cause:{root}",
+        )
+        return result
+
+    def _suggest_fix(self, root_cause: str, tool_name: str) -> str:
+        fixes = {
+            "target_unresponsive": "Increase timeout or verify target is up",
+            "port_closed_or_filtered": "Try different ports or check firewall",
+            "insufficient_privileges": "Run with elevated privileges or try different approach",
+            "incorrect_path_or_target": "Verify the URL/path exists",
+            "authentication_required": "Add auth headers or credentials",
+            "access_forbidden": "Try different endpoint or bypass technique",
+            "too_many_requests": "Add delay between requests or use different IP",
+            "dns_resolution_failed": "Check domain spelling or DNS server",
+            "certificate_issue": "Add --insecure flag or verify SSL cert",
+            "malformed_input": "Check syntax of the input/payload",
+        }
+        return fixes.get(root_cause, "Review error and try different approach")
+
+    async def learn_from_user_correction(self, user_message: str, previous_response: str, messages: list[dict]):
+        correction_keywords = ["wrong", "no", "incorrect", "fix", "that's not", "try again", "not what", "don't"]
+        if not any(kw in user_message.lower() for kw in correction_keywords):
+            return
+
+        what_was_wrong = user_message[:300]
+        what_was_said = previous_response[:300] if previous_response else ""
+
+        lesson = f"User corrected: '{what_was_wrong}' after response: '{what_was_said[:100]}'"
+        await self.memory.add_mistake(
+            context=what_was_said,
+            error=what_was_wrong,
+            lesson=lesson,
+            category="user_correction",
+        )
+
+        tools_in_response = []
+        for m in messages[-5:]:
+            if m.get("role") == "tool":
+                tools_in_response.append(m.get("name", ""))
+        if tools_in_response:
+            for tool in tools_in_response:
+                await self.memory.add_tool_pattern(tool, "", f"user_correction: {what_was_wrong[:100]}")
+
+    async def analyze_behavioral_patterns(self, messages: list[dict]):
+        tool_counts = {}
+        for m in messages:
+            if m.get("role") == "tool":
+                name = m.get("name", "")
+                tool_counts[name] = tool_counts.get(name, 0) + 1
+
+        for tool, count in tool_counts.items():
+            if count > 5:
+                await self.memory.add_behavioral_pattern(
+                    "over_reliance",
+                    f"Used {tool} {count} times in one session — consider diversifying approach"
+                )
+
+        error_count = sum(1 for m in messages if m.get("role") == "tool" and "error" in str(m.get("content", "")).lower())
+        total_tools = sum(1 for m in messages if m.get("role") == "tool")
+        if total_tools > 0 and error_count / total_tools > 0.5:
+            await self.memory.add_behavioral_pattern(
+                "high_error_rate",
+                f"Error rate: {error_count}/{total_tools} — review approach before continuing"
+            )
+
+    async def replay_strategy(self, context: str) -> str:
+        best = await self.memory.get_best_strategy(context)
+        if best:
+            return f"Previously successful strategy for similar task: {best.get('strategy', '')}"
+
+        successes = await self.memory.get_relevant_successes(context, limit=3)
+        if successes:
+            approaches = [s.get("approach", "") for s in successes]
+            return f"Approaches that worked before: {'; '.join(approaches)}"
+
+        return ""
+
+    async def evolve_skill(self, skill_name: str, new_technique: str):
+        await self.memory.add_knowledge(
+            key=f"skill_evolution:{skill_name}",
+            value=new_technique,
+            source="experience",
+            category="skill_evolution",
+        )
+
+    def assess_confidence_detailed(self, messages: list[dict]) -> dict:
+        total_tools = sum(1 for m in messages if m.get("role") == "tool")
+        errors = sum(1 for m in messages if m.get("role") == "tool" and "error" in str(m.get("content", "")).lower())
+        corrections = sum(1 for m in messages if m.get("role") == "user" and any(w in str(m.get("content", "")).lower() for w in ["wrong", "no", "fix", "incorrect"]))
+
+        success_rate = ((total_tools - errors) / total_tools * 100) if total_tools > 0 else 100
+        if success_rate > 80 and corrections == 0:
+            level = "HIGH"
+            detail = "Making steady progress, low error rate"
+        elif success_rate > 50:
+            level = "MEDIUM"
+            detail = f"Some errors ({errors}/{total_tools}), may need to adjust approach"
+        else:
+            level = "LOW"
+            detail = f"High error rate ({errors}/{total_tools}), consider changing strategy"
+
+        if corrections > 0:
+            level = "LOW" if corrections > 1 else "MEDIUM"
+            detail += f", {corrections} user correction(s)"
+
+        return {"level": level, "score": int(success_rate), "detail": detail}

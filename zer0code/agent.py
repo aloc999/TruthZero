@@ -71,7 +71,9 @@ RESPONSE STYLE:
 
 {git_context}
 
-{custom_prompt}"""
+{custom_prompt}
+
+{strategy_hint}"""
 
 
 class ZeroCoreAgent:
@@ -175,6 +177,16 @@ class ZeroCoreAgent:
             except Exception:
                 pass
 
+        strategy_hint = ""
+        if self.reflection:
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                if not loop.is_running():
+                    strategy_hint = loop.run_until_complete(self.reflection.replay_strategy(""))
+            except Exception:
+                pass
+
         project_context = self.project_context.get_context_prompt()
 
         loop_warning = ""
@@ -216,6 +228,7 @@ class ZeroCoreAgent:
             file_tree_context=file_tree_context,
             git_context=git_context,
             custom_prompt=custom_prompt,
+            strategy_hint=strategy_hint,
         )
 
     def _get_messages(self) -> List[Dict[str, Any]]:
@@ -298,6 +311,14 @@ class ZeroCoreAgent:
         except json.JSONDecodeError:
             return ToolResult(output="", success=False, error=f"Invalid JSON arguments for tool '{name}'")
 
+        if self.reflection:
+            try:
+                warning = await self.reflection.proactive_warning(name, arguments)
+                if warning:
+                    self.conversation_history.append({"role": "system", "content": f"PROACTIVE WARNING: {warning}"})
+            except Exception:
+                pass
+
         if self.permissions:
             approved, reason = await self.permissions.check_permission(name, arguments)
             if not approved:
@@ -338,6 +359,12 @@ class ZeroCoreAgent:
                 await self.reflection.analyze_tool_success(name, arguments, result.output, "")
             else:
                 await self.reflection.analyze_tool_failure(name, arguments, result.error or "", "")
+                try:
+                    rca = await self.reflection.root_cause_analysis(name, result.error or "", arguments, "")
+                    if rca.get("suggestion"):
+                        self.conversation_history.append({"role": "system", "content": f"ROOT CAUSE: {rca['root_cause']}. FIX: {rca['suggestion']}"})
+                except Exception:
+                    pass
 
             if self.memory_store and self.session_id:
                 await self.memory_store.add_episode(
@@ -487,6 +514,16 @@ class ZeroCoreAgent:
 
     async def run_stream(self, user_input: str) -> AsyncGenerator[str | Dict, None]:
         self.conversation_history.append({"role": "user", "content": user_input})
+        if self.reflection and len(self.conversation_history) > 2:
+            prev_assistant = ""
+            for m in reversed(self.conversation_history[:-1]):
+                if m.get("role") == "assistant":
+                    prev_assistant = m.get("content", "")
+                    break
+            try:
+                await self.reflection.learn_from_user_correction(user_input, prev_assistant, self.conversation_history)
+            except Exception:
+                pass
         if self.session_manager and self.session_id:
             await self.session_manager.save_message(self.session_id, {"role": "user", "content": user_input})
 

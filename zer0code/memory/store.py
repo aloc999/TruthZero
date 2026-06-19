@@ -355,6 +355,66 @@ class MemoryStore:
             rows = await cursor.fetchall()
         return [row["lesson"] for row in rows]
 
+    async def add_reasoning_trace(self, session_id: str, user_input: str, reasoning: str, tools_used: list, outcome: str):
+        await self._db.execute(
+            "INSERT INTO knowledge (key, value, source, timestamp, category) VALUES (?, ?, ?, ?, ?)",
+            (f"trace:{session_id}", json.dumps({"input": user_input[:200], "reasoning": reasoning[:500], "tools": tools_used, "outcome": outcome[:200]}), "reasoning_trace", time.time(), "reasoning"),
+        )
+        await self._db.commit()
+
+    async def add_behavioral_pattern(self, pattern_type: str, description: str):
+        existing = await self.get_knowledge(category="behavior")
+        for e in existing:
+            if e.get("key") == f"behavior:{pattern_type}" and description in e.get("value", ""):
+                return
+        await self._db.execute(
+            "INSERT INTO knowledge (key, value, source, timestamp, category) VALUES (?, ?, ?, ?, ?)",
+            (f"behavior:{pattern_type}", description, "self_analysis", time.time(), "behavior"),
+        )
+        await self._db.commit()
+
+    async def consolidate_memories(self, max_age_days: int = 30):
+        cutoff = time.time() - (max_age_days * 86400)
+        lessons = {}
+        async with self._db.execute("SELECT id, lesson, category FROM mistakes WHERE timestamp < ?", (cutoff,)) as cursor:
+            rows = await cursor.fetchall()
+        for row in rows:
+            key = row["category"]
+            if key not in lessons:
+                lessons[key] = []
+            lessons[key].append({"id": row["id"], "lesson": row["lesson"]})
+
+        consolidated = 0
+        for category, items in lessons.items():
+            if len(items) < 3:
+                continue
+            merged = "; ".join(item["lesson"][:100] for item in items[:10])
+            await self._db.execute(
+                "INSERT INTO knowledge (key, value, source, timestamp, category) VALUES (?, ?, ?, ?, ?)",
+                (f"consolidated:{category}", f"Merged {len(items)} lessons: {merged}", "consolidation", time.time(), "consolidated"),
+            )
+            ids = [item["id"] for item in items]
+            placeholders = ",".join("?" * len(ids))
+            await self._db.execute(f"DELETE FROM mistakes WHERE id IN ({placeholders})", ids)
+            consolidated += len(items)
+
+        await self._db.commit()
+        return consolidated
+
+    async def get_behavioral_patterns(self) -> list:
+        return await self.get_knowledge(category="behavior")
+
+    async def get_reasoning_traces(self, limit: int = 10) -> list:
+        traces = await self.get_knowledge(category="reasoning")
+        results = []
+        for t in traces[:limit]:
+            try:
+                data = json.loads(t.get("value", "{}"))
+                results.append(data)
+            except Exception:
+                pass
+        return results
+
     async def clear(self):
         for table in ("mistakes", "successes", "tool_patterns", "knowledge", "episodes", "strategies"):
             await self._db.execute(f"DELETE FROM {table}")
