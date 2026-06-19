@@ -895,6 +895,52 @@ async def handle_slash_command(
         else:
             ui.console.print(Text("  Memory not enabled.", style="dim"))
 
+    elif cmd == "/bg":
+        if not args:
+            ui.console.print(Text("  Usage: /bg <prompt> — run task in background while you keep chatting", style="dim"))
+        else:
+            _bg_id = int(time.time()) % 10000
+            async def _run_bg(task_id, prompt):
+                collected = []
+                try:
+                    async for chunk in agent.run_stream(prompt):
+                        if isinstance(chunk, str):
+                            collected.append(chunk)
+                except Exception as e:
+                    ui.console.print(Text(f"\n  [bg:{task_id}] ✗ Error: {e}", style="red"))
+                    return
+                response = "".join(collected)
+                if response:
+                    ui.console.print(Text(f"\n  [bg:{task_id}] ✓ Complete:", style="bold green"))
+                    ui.render_response(response)
+                    ui.console.print(Text(f"  [bg:{task_id}] {agent.total_tokens:,} tokens · {agent.total_cost}", style="dim cyan"))
+            task = asyncio.create_task(_run_bg(_bg_id, args))
+            if not hasattr(agent, '_bg_tasks'):
+                agent._bg_tasks = {}
+            agent._bg_tasks[_bg_id] = {"task": task, "prompt": args[:50]}
+            ui.console.print(Text(f"  ✓ Task #{_bg_id} started in background. Keep chatting.", style="bold green"))
+
+    elif cmd == "/tasks":
+        if hasattr(agent, '_bg_tasks') and agent._bg_tasks:
+            for tid, info in list(agent._bg_tasks.items()):
+                status = "running" if not info["task"].done() else "done"
+                style = "bold yellow" if status == "running" else "bold green"
+                ui.console.print(Text(f"  [{tid}] {status} — {info['prompt']}", style=style))
+                if info["task"].done():
+                    del agent._bg_tasks[tid]
+        else:
+            ui.console.print(Text("  No background tasks.", style="dim"))
+
+    elif cmd == "/stop":
+        if hasattr(agent, '_bg_tasks') and agent._bg_tasks:
+            for tid, info in agent._bg_tasks.items():
+                if not info["task"].done():
+                    info["task"].cancel()
+                    ui.console.print(Text(f"  ✗ Task #{tid} cancelled.", style="dim red"))
+            agent._bg_tasks.clear()
+        else:
+            ui.console.print(Text("  No tasks to stop.", style="dim"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -1066,7 +1112,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         "/report", "/share", "/compare", "/update", "/cache", "/step",
         "/prompt", "/search", "/preview", "/env",
         "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files", "/switch",
-        "/scope", "/workflow", "/wf",
+        "/scope", "/workflow", "/wf", "/consolidate", "/bg", "/tasks", "/stop",
     ], sentence=True)
 
     vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
