@@ -1222,6 +1222,8 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             console.print()
             _task_start[0] = time.time()
             history_len = len(agent.conversation_history)
+            console.print(Text("  Ctrl+C to cancel", style="dim"), end="")
+            console.print()
 
             collected_text = []
             got_text = False
