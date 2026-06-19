@@ -145,7 +145,14 @@ class OpenAIProvider(BaseProvider):
                 headers=self._headers(),
                 json=payload,
             ) as resp:
-                self._handle_error(resp)
+                if resp.status_code >= 400:
+                    error_body = await resp.aread()
+                    error_text = error_body.decode("utf-8", errors="replace")
+                    if resp.status_code == 401:
+                        raise PermissionError(f"Authentication failed: {error_text}")
+                    if resp.status_code == 429:
+                        raise RuntimeError(f"Rate limit exceeded: {error_text}")
+                    raise RuntimeError(f"API error ({resp.status_code}): {error_text}")
                 buffer = ""
                 async for raw_bytes in resp.aiter_bytes():
                     buffer += raw_bytes.decode("utf-8", errors="replace")
