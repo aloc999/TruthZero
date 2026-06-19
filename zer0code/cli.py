@@ -1273,28 +1273,47 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
 
             collected_text = []
             got_text = False
-            try:
-                with console.status("[bold green]  Thinking...", spinner="dots", spinner_style="green") as status:
-                    _spinner[0] = status
-                    async for chunk in agent.run_stream(user_input):
-                        if isinstance(chunk, str):
-                            if not got_text:
-                                status.update("[bold green]  Generating response...")
-                                got_text = True
-                            collected_text.append(chunk)
+            max_retries = 3
+            for _retry in range(max_retries):
+                try:
+                    with console.status("[bold green]  Thinking...", spinner="dots", spinner_style="green") as status:
+                        _spinner[0] = status
+                        async for chunk in agent.run_stream(user_input):
+                            if isinstance(chunk, str):
+                                if not got_text:
+                                    status.update("[bold green]  Generating response...")
+                                    got_text = True
+                                collected_text.append(chunk)
+                        _spinner[0] = None
+                    break
+                except _PermissionPending as pp:
                     _spinner[0] = None
-            except _PermissionPending as pp:
-                _spinner[0] = None
-                agent.conversation_history = agent.conversation_history[:history_len]
-                console.print()
-                console.print(Text(f"  ? {pp.description}", style="bold yellow"))
-                console.print(Text(f"\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
-                agent._permission_pending = {"description": pp.description, "user_input": user_input}
+                    agent.conversation_history = agent.conversation_history[:history_len]
+                    console.print()
+                    console.print(Text(f"  ? {pp.description}", style="bold yellow"))
+                    console.print(Text(f"\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
+                    agent._permission_pending = {"description": pp.description, "user_input": user_input}
+                    break
+                except (OSError, ConnectionError) as e:
+                    _spinner[0] = None
+                    agent.conversation_history = agent.conversation_history[:history_len]
+                    if _retry < max_retries - 1:
+                        delay = (2 ** _retry) * 2
+                        console.print(Text(f"  ⚠ Network error: {e}. Retrying in {delay}s... ({_retry + 1}/{max_retries})", style="bold yellow"))
+                        await asyncio.sleep(delay)
+                        collected_text = []
+                        got_text = False
+                    else:
+                        ui.render_error(f"Network error after {max_retries} retries: {e}")
+                    continue
+                except Exception as e:
+                    _spinner[0] = None
+                    agent.conversation_history = agent.conversation_history[:history_len]
+                    ui.render_error(str(e))
+                    break
+            else:
                 continue
-            except Exception as e:
-                _spinner[0] = None
-                agent.conversation_history = agent.conversation_history[:history_len]
-                ui.render_error(str(e))
+            if agent._permission_pending:
                 continue
 
             task_elapsed = time.time() - _task_start[0]
