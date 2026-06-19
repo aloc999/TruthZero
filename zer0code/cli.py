@@ -941,6 +941,81 @@ async def handle_slash_command(
         else:
             ui.console.print(Text("  No tasks to stop.", style="dim"))
 
+    elif cmd == "/mcp":
+        from zer0code.mcp import MCPClient, MCPServerConfig
+        if not hasattr(agent, '_mcp_client'):
+            agent._mcp_client = MCPClient()
+
+        BUILTIN_SERVERS = {
+            "playwright": MCPServerConfig(name="playwright", command="npx", args=["@playwright/mcp@latest"]),
+            "puppeteer": MCPServerConfig(name="puppeteer", command="npx", args=["@anthropic/mcp-server-puppeteer"]),
+            "fetch": MCPServerConfig(name="fetch", command="npx", args=["@anthropic/mcp-server-fetch"]),
+            "filesystem": MCPServerConfig(name="filesystem", command="npx", args=["@modelcontextprotocol/server-filesystem", os.getcwd()]),
+        }
+
+        if not args or args == "list":
+            ui.console.print(Text("\n  Available MCP Servers:\n", style="bold cyan"))
+            for name, srv in BUILTIN_SERVERS.items():
+                cmd_str = f"{srv.command} {' '.join(srv.args)}"
+                ui.console.print(Text(f"  [{name}]  {cmd_str}", style="dim"))
+            ui.console.print()
+            connected = agent._mcp_client.get_all_tools()
+            if connected:
+                ui.console.print(Text(f"  Connected: {len(connected)} tools from MCP\n", style="bold green"))
+                for t in connected:
+                    ui.console.print(Text(f"    {t.name}: {t.description[:50]}", style="dim"))
+            else:
+                ui.console.print(Text("  No MCP servers connected.\n", style="dim"))
+            ui.console.print(Text("  /mcp connect <name>    — connect a server", style="dim"))
+            ui.console.print(Text("  /mcp disconnect        — disconnect all", style="dim"))
+            ui.console.print(Text("  /mcp add <cmd> <args>  — add custom server\n", style="dim"))
+
+        elif args.startswith("connect"):
+            server_name = args[8:].strip() if len(args) > 8 else ""
+            if not server_name:
+                ui.console.print(Text(f"  Usage: /mcp connect <{'|'.join(BUILTIN_SERVERS.keys())}>", style="dim"))
+            elif server_name in BUILTIN_SERVERS:
+                srv = BUILTIN_SERVERS[server_name]
+                agent._mcp_client.add_server(srv)
+                ui.console.print(Text(f"  ◐ Connecting to {server_name}...", style="dim yellow"))
+                try:
+                    results = await agent._mcp_client.connect_all()
+                    tools = results.get(server_name, [])
+                    if tools:
+                        schemas = agent._mcp_client.get_tool_schemas()
+                        agent.register_mcp_tools(schemas, agent._mcp_client.call_tool)
+                        ui.console.print(Text(f"  ✓ {server_name} connected — {len(tools)} tools available:", style="bold green"))
+                        for t in tools:
+                            ui.console.print(Text(f"    {t.name}: {t.description[:60]}", style="dim"))
+                    else:
+                        ui.console.print(Text(f"  ✗ No tools from {server_name}. Is the package installed?", style="red"))
+                        ui.console.print(Text(f"  Try: npm install -g {' '.join(srv.args[:1])}", style="dim"))
+                except Exception as e:
+                    ui.console.print(Text(f"  ✗ Connection failed: {e}", style="red"))
+                    ui.console.print(Text(f"  Make sure Node.js is installed and run: npm install -g {' '.join(srv.args[:1])}", style="dim"))
+            else:
+                ui.console.print(Text(f"  Unknown server. Available: {', '.join(BUILTIN_SERVERS.keys())}", style="red"))
+
+        elif args == "disconnect":
+            await agent._mcp_client.disconnect_all()
+            agent.mcp_tools.clear()
+            ui.console.print(Text("  ✓ All MCP servers disconnected.", style="bold green"))
+
+        elif args.startswith("add"):
+            parts = args[4:].strip().split(maxsplit=1)
+            if len(parts) >= 1:
+                cmd = parts[0]
+                cmd_args = parts[1].split() if len(parts) > 1 else []
+                name = cmd.split("/")[-1].split("@")[0] or f"custom-{int(time.time()) % 1000}"
+                srv = MCPServerConfig(name=name, command=cmd, args=cmd_args)
+                agent._mcp_client.add_server(srv)
+                ui.console.print(Text(f"  ✓ Added {name}. Use /mcp connect {name} to connect.", style="bold green"))
+            else:
+                ui.console.print(Text("  Usage: /mcp add <command> [args...]", style="dim"))
+
+        else:
+            ui.console.print(Text("  /mcp [list|connect|disconnect|add]", style="dim"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -1112,7 +1187,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         "/report", "/share", "/compare", "/update", "/cache", "/step",
         "/prompt", "/search", "/preview", "/env",
         "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files", "/switch",
-        "/scope", "/workflow", "/wf", "/consolidate", "/bg", "/tasks", "/stop",
+        "/scope", "/workflow", "/wf", "/consolidate", "/bg", "/tasks", "/stop", "/mcp",
     ], sentence=True)
 
     vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
