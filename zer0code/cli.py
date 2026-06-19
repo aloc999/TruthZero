@@ -1280,6 +1280,14 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
             status_line.append(f"{task_elapsed:.1f}s", style="dim green")
             console.print(status_line)
             agent.permissions.auto_approve = False
+            import sys
+            sys.stdout.flush()
+            sys.stderr.flush()
+            try:
+                import termios
+                termios.tcflush(sys.stdin, termios.TCIFLUSH)
+            except Exception:
+                pass
 
         except KeyboardInterrupt:
             agent._switch_pending = None
