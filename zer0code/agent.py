@@ -237,7 +237,7 @@ class ZeroCoreAgent:
         return self._sanitize_messages(messages)
 
     def _sanitize_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        sanitized = []
+        cleaned = []
         for msg in messages:
             m = dict(msg)
             content = m.get("content")
@@ -269,8 +269,41 @@ class ZeroCoreAgent:
                     else:
                         fixed_calls.append(tc)
                 m["tool_calls"] = fixed_calls
-            sanitized.append(m)
-        return sanitized
+            elif "tool_calls" in m and not m["tool_calls"]:
+                del m["tool_calls"]
+            cleaned.append(m)
+
+        result = []
+        i = 0
+        while i < len(cleaned):
+            msg = cleaned[i]
+            if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                tc_ids = set()
+                for tc in msg["tool_calls"]:
+                    tc_id = tc.get("id", "") or tc.get("function", {}).get("name", "")
+                    tc_ids.add(tc_id)
+                tool_results = []
+                j = i + 1
+                while j < len(cleaned) and cleaned[j].get("role") == "tool":
+                    tool_results.append(cleaned[j])
+                    j += 1
+                if tool_results:
+                    result.append(msg)
+                    result.extend(tool_results)
+                    i = j
+                else:
+                    m_no_tc = dict(msg)
+                    del m_no_tc["tool_calls"]
+                    if m_no_tc.get("content"):
+                        result.append(m_no_tc)
+                    i += 1
+            elif msg.get("role") == "tool":
+                i += 1
+            else:
+                result.append(msg)
+                i += 1
+
+        return result
 
     def _get_tool_schemas(self) -> List[Dict[str, Any]]:
         schemas = []
