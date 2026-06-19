@@ -314,8 +314,8 @@ class ZeroCoreAgent:
         if self.reflection:
             try:
                 warning = await self.reflection.proactive_warning(name, arguments)
-                if warning:
-                    self.conversation_history.append({"role": "system", "content": f"PROACTIVE WARNING: {warning}"})
+                if warning and self._on_tool_call:
+                    pass
             except Exception:
                 pass
 
@@ -360,9 +360,7 @@ class ZeroCoreAgent:
             else:
                 await self.reflection.analyze_tool_failure(name, arguments, result.error or "", "")
                 try:
-                    rca = await self.reflection.root_cause_analysis(name, result.error or "", arguments, "")
-                    if rca.get("suggestion"):
-                        self.conversation_history.append({"role": "system", "content": f"ROOT CAUSE: {rca['root_cause']}. FIX: {rca['suggestion']}"})
+                    await self.reflection.root_cause_analysis(name, result.error or "", arguments, "")
                 except Exception:
                     pass
 
