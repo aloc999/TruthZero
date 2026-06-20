@@ -1,38 +1,18 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
 class ToolResult:
     output: str = ""
     success: bool = True
-    error: str | None = None
+    error: Optional[str] = None
 
 
-class BaseTool(ABC):
+class BaseTool:
     name: str = ""
     description: str = ""
-    parameters: dict = {}
+    parameters: dict = field(default_factory=dict)
 
-    @abstractmethod
     async def execute(self, **kwargs) -> ToolResult:
-        ...
-
-    @classmethod
-    def schema(cls) -> dict:
-        return {
-            "type": "function",
-            "function": {
-                "name": cls.name,
-                "description": cls.description,
-                "parameters": cls.parameters,
-            },
-        }
-
-    @classmethod
-    def anthropic_schema(cls) -> dict:
-        return {
-            "name": cls.name,
-            "description": cls.description,
-            "input_schema": cls.parameters,
-        }
+        raise NotImplementedError

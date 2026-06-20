@@ -14,6 +14,11 @@ from zer0code.tools.js_analysis import JSAnalysisTool
 from zer0code.tools.crawler import CrawlerTool
 from zer0code.tools.screenshot import ScreenshotTool
 from zer0code.tools.nuclei_mgr import NucleiManagerTool
+from zer0code.tools.auth_session import AuthSessionTool
+from zer0code.tools.oob_server import OOBServerTool
+from zer0code.tools.response_diff import ResponseDiffTool
+from zer0code.tools.timing_attack import TimingAttackTool
+from zer0code.tools.exploit_chain import ExploitChainTool
 
 ALL_TOOLS = [
     BashTool,
@@ -42,4 +47,9 @@ ALL_TOOLS = [
     CrawlerTool,
     ScreenshotTool,
     NucleiManagerTool,
+    AuthSessionTool,
+    OOBServerTool,
+    ResponseDiffTool,
+    TimingAttackTool,
+    ExploitChainTool,
 ]
