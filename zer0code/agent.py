@@ -108,6 +108,11 @@ class ZeroCoreAgent:
         self._step_mode: bool = False
         self._custom_prompt: str = ""
         self._diff_approval: bool = False
+        self._target_domain: str = ""
+        self._target_memory = None
+        self._pipeline = None
+        self._payload_memory = None
+        self._kb = None
 
     async def initialize(self):
         provider_config = self.config.get_provider_config()
@@ -220,7 +225,7 @@ class ZeroCoreAgent:
         if self._custom_prompt:
             custom_prompt = f"ADDITIONAL INSTRUCTIONS:\n{self._custom_prompt}"
 
-        return SYSTEM_PROMPT.format(
+        prompt = SYSTEM_PROMPT.format(
             project_context=project_context,
             memory_context=memory_context,
             loop_warning=loop_warning,
@@ -230,6 +235,15 @@ class ZeroCoreAgent:
             custom_prompt=custom_prompt,
             strategy_hint=strategy_hint,
         )
+        if self._target_memory:
+            prompt += "\n\n" + self._target_memory.get_context_prompt()
+        if self._pipeline:
+            prompt += "\n\n" + self._pipeline.get_prompt_injection()
+        if self._payload_memory:
+            pm_ctx = self._payload_memory.get_context_prompt()
+            if pm_ctx:
+                prompt += "\n\n" + pm_ctx
+        return prompt
 
     def _get_messages(self) -> List[Dict[str, Any]]:
         system_msg = {"role": "system", "content": self._build_system_prompt()}
@@ -543,7 +557,48 @@ class ZeroCoreAgent:
 
         return "[ZER0CODE] Max iterations (25) reached. Use /compact to reduce context and try again."
 
+    def _detect_and_init_target(self, user_input: str):
+        import re
+        patterns = [
+            r'(?:on|target|scan|pentest|test|audit|recon|hack|hunt|bounty)\s+(?:https?://)?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+)',
+            r'(https?://[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, user_input, re.IGNORECASE)
+            if match:
+                domain = match.group(1).replace("https://", "").replace("http://", "").split("/")[0]
+                if domain and domain != self._target_domain and "." in domain:
+                    self._target_domain = domain
+                    try:
+                        from zer0code.target_memory import TargetMemory
+                        self._target_memory = TargetMemory(domain)
+                    except Exception:
+                        pass
+                    try:
+                        from zer0code.payload_memory import PayloadMemory
+                        self._payload_memory = PayloadMemory(domain)
+                    except Exception:
+                        pass
+                    if not self._pipeline:
+                        try:
+                            from zer0code.pipeline import BugBountyPipeline
+                            self._pipeline = BugBountyPipeline()
+                        except Exception:
+                            pass
+                    try:
+                        from zer0code.knowledge_base import KnowledgeBase
+                        if not self._kb:
+                            self._kb = KnowledgeBase()
+                            import asyncio
+                            loop = asyncio.get_event_loop()
+                            if not loop.is_running():
+                                loop.run_until_complete(self._kb.init())
+                    except Exception:
+                        pass
+                    return
+
     async def run_stream(self, user_input: str) -> AsyncGenerator[str | Dict, None]:
+        self._detect_and_init_target(user_input)
         self.conversation_history.append({"role": "user", "content": user_input})
         if self.reflection and len(self.conversation_history) > 2:
             prev_assistant = ""
