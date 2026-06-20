@@ -1016,6 +1016,149 @@ async def handle_slash_command(
         else:
             ui.console.print(Text("  /mcp [list|connect|disconnect|add]", style="dim"))
 
+    elif cmd == "/sandbox":
+        from zer0code.sandbox import DockerSandbox
+        if not hasattr(agent, '_sandbox'):
+            agent._sandbox = DockerSandbox()
+        if not args or args == "status":
+            status = await agent._sandbox.status()
+            ui.console.print(Text(f"  Sandbox: {'RUNNING' if status['running'] else 'stopped'}", style="bold green" if status.get("running") else "dim"))
+            if status.get("running"):
+                ui.console.print(Text(f"  Container: {status['container']} | Image: {status['image']} | Memory: {status['memory']}", style="dim"))
+        elif args == "start":
+            ui.console.print(Text("  Starting Kali sandbox...", style="dim yellow"))
+            ok, msg = await agent._sandbox.start()
+            ui.console.print(Text(f"  {'✓' if ok else '✗'} {msg}", style="bold green" if ok else "red"))
+        elif args == "stop":
+            ok, msg = await agent._sandbox.stop()
+            ui.console.print(Text(f"  {'✓' if ok else '✗'} {msg}", style="bold green" if ok else "red"))
+        elif args.startswith("exec "):
+            cmd_to_run = args[5:]
+            code, output = await agent._sandbox.execute(cmd_to_run)
+            style = "dim" if code == 0 else "red"
+            ui.console.print(Text(f"  exit:{code}\n{output}", style=style))
+        else:
+            ui.console.print(Text("  /sandbox [start|stop|status|exec <cmd>]", style="dim"))
+
+    elif cmd == "/caido":
+        from zer0code.caido_sdk import CaidoSDK
+        if not hasattr(agent, '_caido'):
+            agent._caido = CaidoSDK()
+        if not args or args == "status":
+            ui.console.print(Text(f"  Caido: {'connected' if agent._caido.connected else 'not connected'}", style="bold green" if agent._caido.connected else "dim"))
+            ui.console.print(Text("  /caido connect | list | get <id> | replay <id> | scope", style="dim"))
+        elif args == "connect":
+            ok, msg = await agent._caido.connect()
+            ui.console.print(Text(f"  {'✓' if ok else '✗'} {msg}", style="bold green" if ok else "red"))
+        elif args.startswith("list"):
+            parts = args.split()
+            host = parts[1] if len(parts) > 1 else ""
+            reqs = await agent._caido.list_requests(limit=30, filter_host=host)
+            ui.console.print(Text(agent._caido.format_requests(reqs), style="dim"))
+        elif args.startswith("get "):
+            req = await agent._caido.get_request(args[4:].strip())
+            ui.console.print(Text(json.dumps(req, indent=2)[:2000], style="dim"))
+        elif args.startswith("replay "):
+            result = await agent._caido.replay_request(args[7:].strip())
+            ui.console.print(Text(json.dumps(result, indent=2)[:2000], style="dim"))
+        elif args == "scope":
+            scope = await agent._caido.get_scope()
+            ui.console.print(Text(json.dumps(scope, indent=2), style="dim"))
+
+    elif cmd == "/kb":
+        from zer0code.knowledge_base import KnowledgeBase
+        if not hasattr(agent, '_kb'):
+            agent._kb = KnowledgeBase()
+            await agent._kb.init()
+        if not args:
+            stats = await agent._kb.get_stats()
+            ui.console.print(Text(f"  Knowledge Base: {stats['total']} entries", style="bold cyan"))
+            for cat, cnt in stats["categories"].items():
+                ui.console.print(Text(f"    {cat}: {cnt}", style="dim"))
+            ui.console.print(Text("\n  /kb search <query> | /kb add <category> <title> <content>", style="dim"))
+        elif args.startswith("search "):
+            query = args[7:].strip()
+            results = await agent._kb.search(query)
+            ui.console.print(Text(agent._kb.format_results(results), style="dim"))
+        elif args.startswith("import "):
+            filepath = args[7:].strip()
+            count = await agent._kb.import_file(filepath)
+            ui.console.print(Text(f"  ✓ Imported {count} entries from {filepath}", style="bold green"))
+        else:
+            results = await agent._kb.search(args)
+            ui.console.print(Text(agent._kb.format_results(results), style="dim"))
+
+    elif cmd == "/target":
+        from zer0code.target_memory import TargetMemory
+        if not args:
+            targets = TargetMemory.list_targets()
+            if targets:
+                for t in targets:
+                    ui.console.print(Text(f"  {t}", style="dim"))
+            else:
+                ui.console.print(Text("  No targets. /target <domain> to start.", style="dim"))
+        else:
+            tm = TargetMemory(args.strip())
+            s = tm.summary
+            ui.console.print(Text(f"\n  Target: {s['target']}", style="bold cyan"))
+            ui.console.print(Text(f"  Subdomains: {s['subdomains']} | Endpoints: {s['endpoints']} | Ports: {s['ports']}", style="dim"))
+            ui.console.print(Text(f"  Tech: {', '.join(s['technologies']) if s['technologies'] else 'unknown'}", style="dim"))
+            ui.console.print(Text(f"  Vulns: {s['vulnerabilities']} | Notes: {s['notes']}\n", style="dim"))
+
+    elif cmd == "/payload":
+        from zer0code.payload_memory import PayloadMemory
+        if not args:
+            ui.console.print(Text("  Usage: /payload <target> [stats|filter <param> <type> <payload>]", style="dim"))
+        else:
+            parts = args.strip().split(maxsplit=1)
+            target = parts[0]
+            sub = parts[1] if len(parts) > 1 else ""
+            pm = PayloadMemory(target)
+            if not sub:
+                stats = pm.get_stats()
+                ui.console.print(Text(f"\n  Payload Memory: {stats['target']}", style="bold cyan"))
+                ui.console.print(Text(f"  Parameters tested: {stats['parameters_tested']}", style="dim"))
+                ui.console.print(Text(f"  Attempts: {stats['total_attempts']} | ✓ {stats['successful']} | ✗ {stats['failed']} | Skip: {stats['skip_rate']}", style="dim"))
+            elif sub == "stats":
+                stats = pm.get_stats()
+                ui.console.print(Text(json.dumps(stats, indent=2), style="dim"))
+            elif sub.startswith("filter "):
+                fparts = sub[7:].strip().split(maxsplit=2)
+                if len(fparts) == 3:
+                    param, vtype, pload = fparts
+                    should_skip = pm.should_skip(param, vtype, pload)
+                    ui.console.print(Text(f"  {'SKIP' if should_skip else 'ALLOW'}: {pload}", style="bold red" if should_skip else "bold green"))
+                else:
+                    ui.console.print(Text("  Usage: /payload <target> filter <param> <type> <payload>", style="dim"))
+            else:
+                ctx = pm.get_context_prompt()
+                if ctx:
+                    ui.console.print(Text(ctx, style="dim"))
+                else:
+                    ui.console.print(Text(f"  No payload data for {target}.", style="dim"))
+
+    elif cmd == "/pipeline":
+        from zer0code.pipeline import BugBountyPipeline
+        if not hasattr(agent, '_pipeline'):
+            agent._pipeline = BugBountyPipeline()
+        if not args:
+            ui.console.print(Text(f"\n{agent._pipeline.format_status()}\n", style="white"))
+        elif args == "next":
+            msg = agent._pipeline.advance_phase()
+            ui.console.print(Text(f"  {msg}", style="bold green"))
+        elif args.upper() in ("RECON", "ANALYSIS", "EXPLOIT", "REPORT"):
+            agent._pipeline.set_phase(args.upper())
+            ui.console.print(Text(f"  Phase set to: {args.upper()}", style="bold green"))
+        elif args == "info":
+            info = agent._pipeline.phase_info
+            ui.console.print(Text(f"\n  Phase: {info.get('name', '?')}\n", style="bold cyan"))
+            for obj in info.get("objectives", []):
+                ui.console.print(Text(f"    ○ {obj}", style="dim"))
+            ui.console.print(Text(f"\n  Tools: {', '.join(info.get('tools', []))}", style="dim"))
+            ui.console.print(Text(f"  Transition: {info.get('transition_criteria', '')}\n", style="dim"))
+        else:
+            ui.console.print(Text("  /pipeline [next|info|RECON|ANALYSIS|EXPLOIT|REPORT]", style="dim"))
+
     elif cmd == "/status":
         mem_count = 0
         if agent.memory_store:
@@ -1188,6 +1331,7 @@ async def interactive_session(config: ZeroCodeConfig, resume_session: str = "", 
         "/prompt", "/search", "/preview", "/env",
         "/init", "/doctor", "/login", "/approve", "/diff", "/turns", "/files", "/switch",
         "/scope", "/workflow", "/wf", "/consolidate", "/bg", "/tasks", "/stop", "/mcp",
+        "/sandbox", "/caido", "/kb", "/target", "/payload", "/pipeline",
     ], sentence=True)
 
     vi_mode = os.environ.get("ZER0CODE_VI_MODE", "").lower() in ("1", "true", "yes")
