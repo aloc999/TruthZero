@@ -113,6 +113,7 @@ class ZeroCoreAgent:
         self._pipeline = None
         self._payload_memory = None
         self._kb = None
+        self._pending_warnings: list[str] = []
 
     async def initialize(self):
         provider_config = self.config.get_provider_config()
@@ -243,6 +244,9 @@ class ZeroCoreAgent:
             pm_ctx = self._payload_memory.get_context_prompt()
             if pm_ctx:
                 prompt += "\n\n" + pm_ctx
+        if self._pending_warnings:
+            prompt += "\n\nLEARNING FEEDBACK:\n" + "\n".join(self._pending_warnings)
+            self._pending_warnings.clear()
         return prompt
 
     def _get_messages(self) -> List[Dict[str, Any]]:
@@ -361,8 +365,8 @@ class ZeroCoreAgent:
         if self.reflection:
             try:
                 warning = await self.reflection.proactive_warning(name, arguments)
-                if warning and self._on_tool_call:
-                    pass
+                if warning:
+                    self._pending_warnings.append(f"PROACTIVE WARNING for {name}: {warning}")
             except Exception:
                 pass
 
@@ -407,7 +411,9 @@ class ZeroCoreAgent:
             else:
                 await self.reflection.analyze_tool_failure(name, arguments, result.error or "", "")
                 try:
-                    await self.reflection.root_cause_analysis(name, result.error or "", arguments, "")
+                    rca = await self.reflection.root_cause_analysis(name, result.error or "", arguments, "")
+                    if rca.get("suggestion"):
+                        self._pending_warnings.append(f"ROOT CAUSE ({name}): {rca['root_cause']}. FIX: {rca['suggestion']}")
                 except Exception:
                     pass
 
