@@ -103,24 +103,24 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 
 **Swarm vs pipeline:** a pipeline walks recon → classify → exploit → report in a fixed line and can't fold mid-run discoveries back into recon. The swarm chews the whole surface concurrently, reacts to every new finding, and lets stale paths die. Breadth at machine speed — every finding proven with captured evidence.
 
-### ZER0CODE vs the sprawl
+### ZER0CODE spec sheet
 
-| | ZER0CODE v0.13 | Pentest-Swarm-AI |
-|---|---|---|
-| Open / self-host | ✅ MIT, Python | ✅ AGPL, Go |
-| Architecture | Stigmergic blackboard | Stigmergic blackboard (original) |
-| Executes vs suggests | Executes | Executes |
-| Memory | Hermes TF-IDF + episodic + strategies + poison guard | pgvector + pheromones |
-| Tools | 35+ incl. sqlmap/msf/ZAP/Burp adapters + PD toolchain | 8 ProjectDiscovery + nmap |
-| Attack-path scoring | Adaptive (graded pheromone) | JEV adaptive |
-| Self-healing requests | ✅ status-driven mutations | planned |
-| Response mining → emergent BOLA | ✅ | planned |
-| Playbooks / chains | 5 YAML / 5 CVE-tied | 5 YAML / growing CVE feed |
-| Providers | OpenAI/Anthropic/DeepSeek/Together/Gemini/Ollama/LMStudio/OrcaRouter | Claude/Together/Gemini/OrcaRouter/Ollama/LMStudio |
-| Labs | docker: crapi/juice/vampi/dvga | bundled labs |
-| Benchmarks | local mini-suite 5/5 (harness-local) | roadmap |
-| MCP | client + stdio server | server beta |
-| Dashboard | alpha stub | alpha |
+| Capability | What you get |
+|---|---|
+| Open / self-host | ✅ MIT, Python — your box, your model, $0 floor |
+| Architecture | Stigmergic blackboard — swarm, not pipeline |
+| Executes vs suggests | Executes — every finding proven with captured evidence |
+| Memory | Hermes TF-IDF + episodic + strategies + poison guard |
+| Tools | 35+ incl. sqlmap/msf/ZAP/Burp adapters + ProjectDiscovery toolchain |
+| Attack-path scoring | Adaptive graded pheromone, best path pursued first |
+| Self-healing requests | ✅ status-driven mutations (401/403/415/429/5xx) |
+| Response mining → emergent BOLA | ✅ one leak becomes cross-endpoint probes |
+| Playbooks / chains | 5 YAML playbooks / 5 CVE-tied chains |
+| Providers | OpenAI/Anthropic/DeepSeek/Together/Gemini/Ollama/LMStudio/OrcaRouter |
+| Labs | docker: crapi/juice/vampi/dvga, teardown on exit |
+| Benchmarks | local mini-suite 5/5 (harness-local, honest label) |
+| MCP | client + stdio server for Claude/Cursor |
+| Dashboard | live API + findings view on `:7777` |
 
 ```
 // ═══════════════════ ARSENAL — 35+ TOOLS ═══════════════════
