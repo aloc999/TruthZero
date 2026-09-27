@@ -357,7 +357,11 @@ async def handle_slash_command(
             parts = args.strip().split(maxsplit=1)
             tpl_name = parts[0]
             tpl_args = parts[1] if len(parts) > 1 else ""
-            rendered = tm.render(tpl_name, target=tpl_args, input=tpl_args)
+            try:
+                rendered = tm.render(tpl_name, target=tpl_args, input=tpl_args)
+            except ValueError as e:
+                ui.console.print(Text(f"  Template error: {e}", style="red"))
+                return
             if rendered:
                 ui.console.print(Text(f"  Running template: {tpl_name}", style="bold cyan"))
                 try:

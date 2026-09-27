@@ -37,6 +37,7 @@ SLASH_COMMANDS = [
     "/skill", "/persona", "/template", "/session", "/compact", "/cost",
     "/budget", "/export", "/undo", "/branch", "/doctor", "/init", "/files",
     "/search", "/theme", "/step", "/exit", "/quit", "/copy",
+    "/scan", "/lab", "/bench",
 ]
 
 # -- neon palettes: config theme -> TUI colors (cyberpunk default energy) --
@@ -317,6 +318,7 @@ if HAS_TEXTUAL:
 
             tools_count = len(self.agent.tool_registry) if self.agent else 0
             conv.write(Text(f"  {tools_count} tools  │  /help for commands  │  Ctrl+B panel  │  Shift+drag to copy", style="dim"))
+            conv.write(Text(f"  /scan <target> hunt  │  /lab up crapi  │  /bench score  │  /theme cycle look", style="dim"))
             conv.write(Text(""))
             conv.write(Text("  ─" * 35, style="dim"))
             conv.write(Text(""))
@@ -629,7 +631,10 @@ if HAS_TEXTUAL:
                     ("/files [query]", "Project files"),
                     ("/search <query>", "Search history"),
                     ("/step", "Toggle step mode"),
-                    ("/theme", "Toggle theme"),
+                    ("/theme", "Cycle/set theme"),
+                    ("/scan <t>", "Swarm hunt a target"),
+                    ("/lab list|up|down", "Vuln labs"),
+                    ("/bench", "Benchmark score"),
                     ("Ctrl+B", "Toggle side panel"),
                     ("Ctrl+F", "Search conversation"),
                     ("Ctrl+L", "Clear"),
@@ -684,15 +689,19 @@ if HAS_TEXTUAL:
 
             elif command == "/provider":
                 if args and self.config:
+                    from zer0code.providers import PROVIDERS
                     p = args.strip().lower()
-                    if p in ("openai", "anthropic", "deepseek", "ollama"):
+                    if p in PROVIDERS:
                         self.config.provider = p
-                        self.config.save()
+                        try:
+                            self.config.save()
+                        except Exception:
+                            pass
                         conv.write(Text(f"  Provider → {p}", style=_st(pal, "primary")))
                         self._update_status()
                         self._update_header()
                     else:
-                        conv.write(Text("  Valid: openai, anthropic, deepseek, together, gemini, ollama, lmstudio, orcarouter", style=_st(pal, "err", bold=False)))
+                        conv.write(Text(f"  Valid: {', '.join(sorted(PROVIDERS))}", style=_st(pal, "err", bold=False)))
                 else:
                     conv.write(Text(f"  Current: {self.config.provider if self.config else '?'}", style="dim"))
 
@@ -707,6 +716,8 @@ if HAS_TEXTUAL:
                     old = len(self.agent.conversation_history)
                     self.agent.conversation_history = await self.agent.compactor.compact(self.agent.conversation_history)
                     conv.write(Text(f"  Compacted: {old} → {len(self.agent.conversation_history)} messages", style=_st(pal, "primary")))
+                else:
+                    conv.write(Text("  Nothing to compact (agent not ready).", style="dim"))
 
             elif command == "/export":
                 if self.agent:
@@ -750,6 +761,61 @@ if HAS_TEXTUAL:
                         p = pm.get_persona(name)
                         conv.write(Text(f"  {name:<16} {p.title}", style="dim"))
 
+            elif command == "/template":
+                from zer0code.templates import TemplateManager
+                tm = TemplateManager()
+                if not args:
+                    conv.write(Text("\n  Prompt Templates\n", style=_st(pal, "accent")))
+                    for tname, desc in tm.list_templates():
+                        line = Text()
+                        line.append(f"  {tname:<22}", style=_st(pal, "accent"))
+                        line.append(desc[:60], style="dim")
+                        conv.write(line)
+                    conv.write(Text("  Usage: /template <name> <target>", style="dim"))
+                else:
+                    parts = args.strip().split(maxsplit=1)
+                    tpl_name = parts[0]
+                    tpl_args = parts[1] if len(parts) > 1 else ""
+                    try:
+                        rendered = tm.render(tpl_name, target=tpl_args, input=tpl_args)
+                    except ValueError as e:
+                        conv.write(Text(f"  Template error: {e}", style=_st(pal, "err", bold=False)))
+                        return
+                    if rendered:
+                        conv.write(Text(f"  Running template: {tpl_name}", style=_st(pal, "accent")))
+                        await self._run_agent_stream(rendered)
+                    else:
+                        conv.write(Text(f"  Template '{tpl_name}' not found.", style=_st(pal, "err", bold=False)))
+
+            elif command == "/session":
+                sm = self.agent.session_manager if self.agent else None
+                if sm is None:
+                    conv.write(Text("  Sessions unavailable (agent not ready).", style="dim"))
+                elif not args or args == "list":
+                    sessions = await sm.list_sessions()
+                    if sessions:
+                        for s in sessions:
+                            from datetime import datetime as _dt
+                            upd = _dt.fromtimestamp(s.updated_at).strftime("%m-%d %H:%M")
+                            cur = " ◀" if self.agent and s.session_id == self.agent.session_id else ""
+                            conv.write(Text(f"  {s.session_id:<10} {s.title[:30]:<30} {s.message_count:>3} msgs {upd}{cur}", style="dim"))
+                    else:
+                        conv.write(Text("  No sessions found.", style="dim"))
+                elif args.startswith("load ") and self.agent:
+                    sid = args[5:].strip()
+                    if await self.agent.load_session(sid):
+                        conv.write(Text(f"  Loaded {sid} ({self.agent.message_count} messages)", style=_st(pal, "primary")))
+                    else:
+                        conv.write(Text(f"  Session {sid} not found.", style=_st(pal, "err", bold=False)))
+                elif args.startswith("title ") and self.agent and self.agent.session_id:
+                    await sm.update_title(self.agent.session_id, args[6:].strip())
+                    conv.write(Text(f"  Title updated.", style=_st(pal, "primary")))
+                elif args.startswith("delete "):
+                    await sm.delete_session(args[7:].strip())
+                    conv.write(Text(f"  Deleted {args[7:].strip()}.", style=_st(pal, "primary")))
+                else:
+                    conv.write(Text("  Usage: /session list|load <id>|title <name>|delete <id>", style="dim"))
+
             elif command == "/search":
                 if args:
                     self._do_search(args.strip())
@@ -787,8 +853,15 @@ if HAS_TEXTUAL:
                 conv.write(Text(f"  Step mode: {'ON' if self.step_mode else 'OFF'}", style=_st(pal, "primary")))
 
             elif command == "/theme":
-                self.dark = not self.dark
-                conv.write(Text(f"  Theme toggled", style=_st(pal, "primary")))
+                order = ["hacker", "cyberpunk", "dark", "minimal"]
+                if args and args.strip().lower() in TUI_PALETTES:
+                    name = args.strip().lower()
+                else:
+                    cur = getattr(self.config, "theme", "hacker") if self.config else "hacker"
+                    name = order[(order.index(cur) + 1) % len(order)] if cur in order else "cyberpunk"
+                self._apply_theme(name)
+                conv.write(Text(f"  Theme → {name} (saved)", style=_st(pal, "primary")))
+                pal = self._tui_pal
 
             elif command == "/budget":
                 if args and self.agent:
@@ -833,12 +906,81 @@ if HAS_TEXTUAL:
                             self.agent.conversation_history = self.agent.brancher.current_messages
                             conv.write(Text(f"  Switched → {args[7:].strip()}", style=_st(pal, "primary")))
                             self._update_breadcrumb(branch_name=args[7:].strip())
+                        else:
+                            conv.write(Text(f"  Branch not found: {args[7:].strip()}", style=_st(pal, "err", bold=False)))
+                    else:
+                        conv.write(Text("  Usage: /branch list|create <name>|switch <name>", style="dim"))
 
             elif command in ("/exit", "/quit"):
                 self.exit()
 
             elif command == "/copy":
                 self.action_copy_last()
+
+            elif command == "/scan":
+                from zer0code.headless import run_headless_scan
+                if not args:
+                    conv.write(Text("  Usage: /scan <target> [--scope s] [--rounds N] [--no-swarm] [--jev]", style="dim"))
+                else:
+                    toks = args.split()
+                    target = toks[0]
+                    scope, rounds, mode, jev = target, 6, "swarm", False
+                    it = iter(toks[1:])
+                    bad = False
+                    for t in it:
+                        if t == "--scope":
+                            scope = next(it, scope)
+                        elif t == "--rounds":
+                            try:
+                                rounds = int(next(it, rounds))
+                            except ValueError:
+                                conv.write(Text("  --rounds needs a number", style=_st(pal, "err", bold=False)))
+                                bad = True
+                        elif t == "--no-swarm":
+                            mode = "sequential"
+                        elif t == "--jev":
+                            jev = True
+                    if not bad:
+                        conv.write(Text(f"  Hunting {target} [{mode}]…", style=_st(pal, "accent")))
+                        try:
+                            result, board_file = await run_headless_scan(
+                                target, scope=scope, rounds=rounds, mode=mode, jev=jev)
+                            conv.write(Text(f"  Done: {result.rounds} rounds, {result.findings_total} findings, "
+                                            f"{result.confirmed} confirmed ({result.stopped_reason})", style=_st(pal, "primary")))
+                            conv.write(Text(f"  Board: {board_file}", style="dim"))
+                        except PermissionError as e:
+                            conv.write(Text(f"  {e}", style=_st(pal, "err", bold=False)))
+                        except Exception as e:
+                            conv.write(Text(f"  Scan failed: {e}", style=_st(pal, "err", bold=False)))
+
+            elif command == "/lab":
+                from zer0code.lab import LabManager
+                mgr = LabManager()
+                sub = (args or "list").split()
+                if sub[0] == "list":
+                    for spec in mgr.list_labs():
+                        conv.write(Text(f"  {spec.name:<8} {spec.description} (:{spec.port})", style="dim"))
+                elif sub[0] in ("up", "down") and len(sub) > 1:
+                    try:
+                        if sub[0] == "up":
+                            url = await mgr.up(sub[1])
+                            conv.write(Text(f"  {sub[1]} up at {url}", style=_st(pal, "primary")))
+                        else:
+                            await mgr.down(sub[1])
+                            conv.write(Text(f"  {sub[1]} down", style=_st(pal, "primary")))
+                    except Exception as e:
+                        conv.write(Text(f"  lab failed: {e}", style=_st(pal, "err", bold=False)))
+                else:
+                    conv.write(Text("  Usage: /lab list|up <name>|down <name>", style="dim"))
+
+            elif command == "/bench":
+                from zer0code.bench import run_offline, run_suite
+                if "--suite" in args and "mini" in args:
+                    res = run_suite("mini")
+                    conv.write(Text(f"  Mini-suite: {res['passed']}/{res['total']} (score {res['score']})", style=_st(pal, "primary")))
+                else:
+                    res = await run_offline()
+                    conv.write(Text(f"  Bench score: {res['score']} (detection {res['detection']}, precision {res['precision']})", style=_st(pal, "primary")))
 
             else:
                 conv.write(Text(f"  Unknown: {command}  — type /help", style=_st(pal, "warn", bold=False)))
@@ -889,8 +1031,30 @@ if HAS_TEXTUAL:
         def action_app_exit(self) -> None:
             self.exit()
 
+        def _apply_theme(self, name: str) -> None:
+            """Switch named neon theme live (chrome CSS + content palette)."""
+            self._tui_pal = tui_palette(name)
+            ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, self._tui_pal)
+            try:
+                self.refresh_css()
+            except Exception:
+                pass
+            if self.config and hasattr(self.config, "theme"):
+                self.config.theme = name
+                try:
+                    self.config.save()
+                except Exception:
+                    pass
+            try:
+                self._update_header()
+            except Exception:
+                pass
+
         def action_toggle_dark(self) -> None:
-            self.dark = not self.dark
+            order = ["hacker", "cyberpunk", "dark", "minimal"]
+            cur = getattr(self.config, "theme", "hacker") if self.config else "hacker"
+            nxt = order[(order.index(cur) + 1) % len(order)] if cur in order else "cyberpunk"
+            self._apply_theme(nxt)
 
         def action_search_conv(self) -> None:
             self._search_mode = True

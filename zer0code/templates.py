@@ -123,7 +123,7 @@ class TemplateManager:
 
     def render(self, name: str, **kwargs: str) -> str:
         if name not in self._templates:
-            raise KeyError(f"Unknown template: {name}")
+            return ""
         t = self._templates[name]
         prompt = t.prompt
         for key, value in kwargs.items():
