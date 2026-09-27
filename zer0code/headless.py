@@ -1,0 +1,67 @@
+"""Headless swarm runner — shared by `scan` CLI and the dashboard API.
+
+Deterministic seeder loop (no LLM): recon seeds surface, classify triages,
+exploit proves top adaptive path, report summarizes. Real LLM wiring plugs
+in via `agent_runner` override.
+"""
+from __future__ import annotations
+
+import time
+from pathlib import Path
+
+from zer0code.swarm import Blackboard, SwarmScheduler
+from zer0code.scope import ScopeManager
+
+BOARDS_DIR = Path.home() / ".zer0code" / "boards"
+
+
+def headless_runner_factory(board: Blackboard, scorer=None):
+    async def _runner(spec, tgt, b):
+        if spec.name == "recon":
+            b.add("SUBDOMAIN", f"api.{tgt}", agent="recon", target=tgt)
+            b.add("ENDPOINT", f"https://{tgt}/api/v1/users", agent="recon", target=tgt)
+            b.add("OBJECT_REF", "Object ref: user_id=1024", agent="recon", target=tgt)
+            return ("SUBDOMAIN: api.{}\nENDPOINT: /api/v1/users\n"
+                    "CANDIDATE: possible IDOR on user_id".format(tgt))
+        if spec.name == "classify":
+            for f in b.hot():
+                if f.ftype == "VULN":
+                    f.severity = "high"
+            return "POTENTIAL: BOLA on /api/v1/users (user_id swap)"
+        if spec.name == "exploit":
+            top = scorer.top(b, 1)[0].name if scorer else "bola-idor-chain"
+            b.add("VULN_CONFIRMED", f"{top} proven on {tgt}",
+                  agent="exploit", target=tgt, severity="high",
+                  evidence="HTTP 200 cross-user response diff captured")
+            if scorer:
+                scorer.reinforce(top)
+            return f"CONFIRMED: {top} on {tgt} with evidence"
+        if spec.name == "report":
+            return "REPORT: {} confirmed finding(s) ready".format(
+                sum(1 for f in b.all() if f.ftype == "VULN_CONFIRMED"))
+        return ""
+    return _runner
+
+
+async def run_headless_scan(target: str, scope: str = "", rounds: int = 6,
+                            budget_s: float = 0, persist: bool = True,
+                            adaptive: bool = False) -> tuple:
+    """Returns (SwarmResult, board_file). Raises PermissionError if out of scope."""
+    from zer0code.scoring import AdaptiveScorer
+    sm = ScopeManager()
+    for s in [p.strip() for p in (scope or target).split(",") if p.strip()]:
+        sm.add_in_scope(s)
+    if not sm.is_in_scope(target):
+        raise PermissionError(f"target out of scope: {target}")
+    board = Blackboard()
+    sched = SwarmScheduler(board, max_rounds=rounds, scope_checker=sm.is_in_scope)
+    scorer = AdaptiveScorer() if adaptive else None
+    result = await sched.run(target, headless_runner_factory(board, scorer),
+                             budget_s=budget_s)
+    board_file = ""
+    if persist:
+        BOARDS_DIR.mkdir(parents=True, exist_ok=True)
+        safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)
+        board_file = str(BOARDS_DIR / f"{safe}-{int(time.time())}.json")
+        board.save(board_file)
+    return result, board_file

@@ -1814,9 +1814,9 @@ def scan_cmd(ctx: click.Context, target: str, scope: str, swarm: bool,
              rounds: int, budget: int, jev: bool, jev_adaptive: bool,
              strict: bool, lab: bool, lab_target: str) -> None:
     """Scriptable swarm scan: zer0code scan <target> --scope <scope> --swarm."""
-    from zer0code.swarm import Blackboard, SwarmScheduler
+    from zer0code.headless import run_headless_scan
+    from zer0code.swarm import Blackboard
     from zer0code.scoring import AdaptiveScorer
-    from zer0code.scope import ScopeManager
     from zer0code.cleanup import GLOBAL_CLEANUP
     config = ctx.obj["config"]
     console = Console()
@@ -1832,45 +1832,21 @@ def scan_cmd(ctx: click.Context, target: str, scope: str, swarm: bool,
     if not target:
         console.print(Text("  Usage: zer0code scan <target> --scope <target> [--swarm]", style="red"))
         return
-    sm = ScopeManager()
-    for s in [p.strip() for p in (scope or target).split(",") if p.strip()]:
-        sm.add_in_scope(s)
     GLOBAL_CLEANUP.register("swarm-board-save", lambda: None)
-    board = Blackboard()
-    sched = SwarmScheduler(board, max_rounds=rounds,
-                           scope_checker=sm.is_in_scope)
-    scorer = AdaptiveScorer() if (jev_adaptive or config.jev_adaptive) else None
-
-    async def _agent_runner(spec, tgt, b):
-        # Headless mode without LLM: seed recon findings so pipeline is testable.
-        if spec.name == "recon":
-            b.add("SUBDOMAIN", f"api.{tgt}", agent="recon", target=tgt)
-            b.add("ENDPOINT", f"https://{tgt}/api/v1/users", agent="recon", target=tgt)
-            b.add("OBJECT_REF", "Object ref: user_id=1024", agent="recon", target=tgt)
-            return "SUBDOMAIN: api.{}\nENDPOINT: /api/v1/users\nCANDIDATE: possible IDOR on user_id".format(tgt)
-        if spec.name == "classify":
-            for f in b.hot():
-                if f.ftype == "VULN":
-                    f.severity = "high"
-            return "POTENTIAL: BOLA on /api/v1/users (user_id swap)"
-        if spec.name == "exploit":
-            top = scorer.top(b, 1)[0].name if scorer else "bola-idor-chain"
-            b.add("VULN_CONFIRMED", f"{top} proven on {tgt}",
-                  agent="exploit", target=tgt, severity="high",
-                  evidence="HTTP 200 cross-user response diff captured")
-            if scorer:
-                scorer.reinforce(top)
-            return f"CONFIRMED: {top} on {tgt} with evidence"
-        if spec.name == "report":
-            return "REPORT: {} confirmed finding(s) ready".format(
-                sum(1 for f in b.all() if f.ftype == "VULN_CONFIRMED"))
-        return ""
-
-    result = asyncio.run(sched.run(target, _agent_runner, budget_s=float(budget or 0)))
+    use_adaptive = bool(jev_adaptive or config.jev_adaptive)
+    scorer = AdaptiveScorer() if use_adaptive else None
+    try:
+        result, board_file = asyncio.run(run_headless_scan(
+            target, scope=scope or target, rounds=rounds,
+            budget_s=float(budget or 0), adaptive=use_adaptive))
+    except PermissionError as e:
+        console.print(Text(f"  {e}", style="bold red"))
+        return
+    board = Blackboard(board_file or None)
     console.print(Text(f"\n  Swarm done: {result.rounds} rounds, "
                        f"{result.findings_total} findings, {result.confirmed} confirmed "
                        f"({result.stopped_reason})", style="bold green"))
-    console.print(Text(f"  {sched.status_line()}", style="dim"))
+    console.print(Text(f"  Board: {board_file}", style="dim"))
     if scorer:
         console.print(Text("  Top paths:", style="bold"))
         for p in scorer.top(board, 3):
@@ -1967,10 +1943,9 @@ def mcp_cmd(action: str) -> None:
 @cli.command(name="serve")
 @click.option("--port", default=7777, help="Dashboard port (default 7777)")
 def serve_cmd(port: int) -> None:
-    """Start API server + live dashboard stub (alpha)."""
-    console = Console()
-    console.print(Text(f"  Dashboard (alpha): web/ stub → http://localhost:{port}", style="dim"))
-    console.print(Text("  API: POST /api/scan {target, scope} → swarm run; GET /api/findings", style="dim"))
+    """Start live dashboard + HTTP API (GET /api/findings, POST /api/scan)."""
+    from zer0code.dashboard import DashboardServer
+    DashboardServer(port).serve_forever()
 
 
 @cli.command(name="gate")

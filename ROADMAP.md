@@ -50,6 +50,13 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
 | Green test suite | **stable** | 43 passed, 0 failed |
 
+## v0.13 — Live Grid (shipped)
+| Feature | Status | Notes |
+|---|---|---|
+| Neon SVG hero banner (browser-verified) | **stable** | `banner/hero.svg`, README hero |
+| Live dashboard + HTTP API | **beta** | `zer0code/dashboard.py` — GET /, /api/findings, /api/sarif, POST /api/scan (403 OOS) |
+| Shared headless runner (CLI + API) | **stable** | `zer0code/headless.py`, boards persist to `~/.zer0code/boards/` |
+
 ## v0.12 — Benchmarks + pgvector + Marketplace (shipped)
 | Feature | Status | Notes |
 |---|---|---|

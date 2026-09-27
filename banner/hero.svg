@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-label="ZER0CODE — hack the planet at machine speed">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05010f"/>
+      <stop offset="0.55" stop-color="#0d0221"/>
+      <stop offset="1" stop-color="#1a0533"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8faff"/>
+      <stop offset="0.45" stop-color="#00f0ff"/>
+      <stop offset="0.55" stop-color="#0b3b6e"/>
+      <stop offset="1" stop-color="#ff2a6d"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd319"/>
+      <stop offset="0.6" stop-color="#ff2975"/>
+      <stop offset="1" stop-color="#8c1eff"/>
+    </linearGradient>
+    <radialGradient id="sunglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff2975" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff2975" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="neon" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b1"/>
+      <feGaussianBlur stdDeviation="18" result="b2"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#7b2ff7" stroke-opacity="0.28" stroke-width="1"/>
+    </pattern>
+    <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="1.4" y="0" fill="#000" opacity="0.5"/>
+    </pattern>
+    <clipPath id="frame">
+      <rect x="8" y="8" width="1184" height="464" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect x="0" y="0" width="1200" height="480" fill="url(#bg)"/>
+    <rect x="0" y="0" width="1200" height="480" fill="url(#grid)"/>
+
+    <!-- synthwave sun -->
+    <circle cx="600" cy="338" r="150" fill="url(#sunglow)"/>
+    <circle cx="600" cy="330" r="104" fill="url(#sun)" opacity="0.9"/>
+    <g fill="#0d0221" opacity="0.9">
+      <rect x="490" y="330" width="220" height="7"/>
+      <rect x="490" y="346" width="220" height="10"/>
+      <rect x="490" y="365" width="220" height="13"/>
+      <rect x="490" y="387" width="220" height="16"/>
+    </g>
+
+    <!-- perspective floor -->
+    <g stroke="#ff2a6d" stroke-opacity="0.5" stroke-width="2">
+      <line x1="0" y1="400" x2="1200" y2="400"/>
+      <line x1="0" y1="430" x2="1200" y2="430" stroke-opacity="0.35"/>
+      <line x1="0" y1="462" x2="1200" y2="462" stroke-opacity="0.22"/>
+    </g>
+    <g stroke="#00f0ff" stroke-opacity="0.28" stroke-width="1.5">
+      <line x1="600" y1="400" x2="600" y2="480"/>
+      <line x1="600" y1="400" x2="200" y2="480"/>
+      <line x1="600" y1="400" x2="1000" y2="480"/>
+      <line x1="600" y1="400" x2="0" y2="470"/>
+      <line x1="600" y1="400" x2="1200" y2="470"/>
+    </g>
+
+    <!-- corner brackets -->
+    <g stroke="#00f0ff" stroke-width="4" filter="url(#soft)" fill="none">
+      <path d="M28 76V36Q28 28 36 28H76"/>
+      <path d="M1124 28H1164Q1172 28 1172 36V76"/>
+      <path d="M28 404V444Q28 452 36 452H76"/>
+      <path d="M1124 452H1164Q1172 452 1172 444V404"/>
+    </g>
+    <text x="48" y="58" font-family="monospace" font-size="16" fill="#05ffa1" letter-spacing="3">SYS//ONLINE</text>
+    <text x="1152" y="58" font-family="monospace" font-size="16" fill="#ff2a6d" text-anchor="end" letter-spacing="3">SECTOR&#183;7</text>
+
+    <!-- main chrome title -->
+    <text x="600" y="208" text-anchor="middle" font-family="'Courier New',monospace"
+          font-size="118" font-weight="bold" letter-spacing="10"
+          fill="url(#chrome)" filter="url(#neon)">ZER0CODE</text>
+    <text x="600" y="208" text-anchor="middle" font-family="'Courier New',monospace"
+          font-size="118" font-weight="bold" letter-spacing="10"
+          fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="1">ZER0CODE</text>
+
+    <!-- glitch echoes -->
+    <text x="594" y="208" text-anchor="middle" font-family="'Courier New',monospace"
+          font-size="118" font-weight="bold" letter-spacing="10"
+          fill="#ff2a6d" opacity="0.35">ZER0CODE</text>
+    <text x="606" y="208" text-anchor="middle" font-family="'Courier New',monospace"
+          font-size="118" font-weight="bold" letter-spacing="10"
+          fill="#00f0ff" opacity="0.35">ZER0CODE</text>
+
+    <!-- tagline bar -->
+    <rect x="230" y="248" width="740" height="2" fill="#ff2a6d" filter="url(#soft)"/>
+    <text x="600" y="288" text-anchor="middle" font-family="monospace"
+          font-size="30" font-weight="bold" letter-spacing="6"
+          fill="#ffd319" filter="url(#neon)">&#9889; HACK THE PLANET AT MACHINE SPEED &#9889;</text>
+    <text x="600" y="322" text-anchor="middle" font-family="monospace"
+          font-size="17" letter-spacing="3" fill="#05ffa1" filter="url(#soft)">&#62;&#62; autonomous AI pentest swarm // licensed runners only &#60;&#60;</text>
+
+    <!-- footer strip -->
+    <text x="48" y="436" font-family="monospace" font-size="15" fill="#7b2ff7" letter-spacing="2">NIGHT CITY GRID // v0.13</text>
+    <text x="1152" y="436" font-family="monospace" font-size="15" fill="#7b2ff7" text-anchor="end" letter-spacing="2">STAY CHROME</text>
+
+    <rect x="0" y="0" width="1200" height="480" fill="url(#scan)" opacity="0.35"/>
+  </g>
+  <rect x="8" y="8" width="1184" height="464" rx="14" fill="none" stroke="#00f0ff" stroke-opacity="0.6" stroke-width="2"/>
+</svg>

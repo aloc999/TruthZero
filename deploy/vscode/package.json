@@ -2,7 +2,7 @@
   "name": "zer0code-swarm",
   "displayName": "ZER0CODE Swarm",
   "description": "Autonomous pentest swarm: scan, playbooks, SARIF findings (beta)",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "aloc999",
   "license": "MIT",
   "engines": { "vscode": "^1.85.0" },

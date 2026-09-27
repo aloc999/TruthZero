@@ -1,0 +1,89 @@
+import asyncio
+import http.client
+import json
+import urllib.parse
+
+from zer0code.dashboard import DashboardServer
+from zer0code.headless import run_headless_scan
+
+
+def _post(port, path, data):
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
+    body = json.dumps(data)
+    conn.request("POST", path, body, {"Content-Type": "application/json"})
+    resp = conn.getresponse()
+    out = (resp.status, json.loads(resp.read().decode() or "{}"))
+    conn.close()
+    return out
+
+
+def _get(port, path):
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=15)
+    conn.request("GET", path)
+    resp = conn.getresponse()
+    out = (resp.status, resp.read().decode())
+    conn.close()
+    return out
+
+
+def test_headless_scan_and_persist(tmp_path, monkeypatch):
+    import zer0code.headless as h
+    monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
+    result, board_file = asyncio.run(
+        run_headless_scan("example.com", scope="example.com", rounds=2))
+    assert result.findings_total >= 3
+    assert board_file.endswith(".json")
+    assert tmp_path.joinpath(board_file.split("/")[-1]).exists()
+
+
+def test_headless_scope_block():
+    import pytest
+    with pytest.raises(PermissionError):
+        asyncio.run(run_headless_scan("evil.com", scope="example.com", rounds=1))
+
+
+def test_dashboard_api():
+    srv = DashboardServer(0)
+    url = srv.start_background()
+    port = int(urllib.parse.urlparse(url).port)
+    try:
+        # scan (in scope)
+        code, res = _post(port, "/api/scan",
+                          {"target": "example.com", "scope": "example.com",
+                           "rounds": 2})
+        assert code == 200, res
+        assert res["findings_total"] >= 3
+        board_file = res["board_file"]
+        assert board_file
+
+        # findings for that board
+        code, body = _get(port, "/api/findings?board_file=" +
+                          urllib.parse.quote(board_file))
+        assert code == 200
+        data = json.loads(body)
+        assert data["summary"]["total"] >= 3
+
+        # sarif
+        code, body = _get(port, "/api/sarif?board_file=" +
+                          urllib.parse.quote(board_file))
+        assert code == 200
+        assert json.loads(body)["version"] == "2.1.0"
+
+        # out of scope → 403 fail closed
+        code, res = _post(port, "/api/scan",
+                          {"target": "evil.com", "scope": "example.com"})
+        assert code == 403
+
+        # missing target → 400
+        code, _ = _post(port, "/api/scan", {})
+        assert code == 400
+
+        # index
+        code, body = _get(port, "/")
+        assert code == 200 and ("ZER0CODE" in body or "swarm" in body.lower())
+
+        # unknown → 404
+        code, _ = _get(port, "/nope")
+        assert code == 404
+    finally:
+        srv.stop()

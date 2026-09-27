@@ -1,21 +1,13 @@
 <div align="center">
 
-```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-
-  ╺━┓┏━╸┏━┓┏━┓┏━╸┏━┓╺┳┓┏━╸
-  ┏━┛┣╸ ┣┳┛┃┃┃┃  ┃ ┃ ┃┃┣╸
-  ┗━╸┗━╸╹┗╸┗━┛┗━╸┗━┛╺┻┛┗━╸
-
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-```
+<img src="banner/hero.svg" alt="ZER0CODE — hack the planet at machine speed" width="100%">
 
 ### ⚡ HACK THE PLANET AT MACHINE SPEED ⚡
 
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
-[![version](https://img.shields.io/badge/version-v0.12.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
-[![tests](https://img.shields.io/badge/tests-46_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
+[![version](https://img.shields.io/badge/version-v0.13.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
+[![tests](https://img.shields.io/badge/tests-49_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
@@ -80,7 +72,7 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 | Postgres board + pgvector similarity | **beta** | `zer0code/swarm/pgboard.py` |
 | Docker vuln labs (crapi/juice/vampi/dvga) | **beta** | `zer0code lab` |
 | VS Code extension / GitHub Action | **beta** | `deploy/` |
-| Live dashboard | **alpha** | `web/` → `:7777` |
+| Live dashboard + HTTP API (`/api/findings`, `/api/sarif`, `POST /api/scan`) | **beta** | `zer0code serve --port 7777` |
 
 ```
 // ═══════════════════ HOW THE SWARM HUNTS ═══════════════════
@@ -113,7 +105,7 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 
 ### ZER0CODE vs the sprawl
 
-| | ZER0CODE v0.12 | Pentest-Swarm-AI |
+| | ZER0CODE v0.13 | Pentest-Swarm-AI |
 |---|---|---|
 | Open / self-host | ✅ MIT, Python | ✅ AGPL, Go |
 | Architecture | Stigmergic blackboard | Stigmergic blackboard (original) |
@@ -154,6 +146,7 @@ zer0code playbook list                    # bug-bounty, external-asm, ci-cd, int
 zer0code playbook run bug-bounty --target shop.t
 zer0code playbook chains                  # ssrf-to-rce, auth-bypass-to-rce, bola-idor-chain, ssti-to-rce, takeover
 zer0code asm diff old.json new.json       # ASM delta: new assets go hot on the board
+zer0code serve --port 7777                # live dashboard + API (findings/SARIF/scan)
 ```
 
 ```
@@ -230,6 +223,7 @@ zer0code sessions / memory / doctor / install-tools
 
 // CHANGELOG — how we got here
 
+- **v0.13 Live Grid** — neon SVG hero banner, live dashboard + HTTP API (`serve` for real: findings/SARIF/scan, scope fail-closed), shared headless runner
 - **v0.12** — benchmark suites wired (mini 5/5 + RESULTS.md), pgvector embeddings, Marketplace packaging + release pipeline
 - **v0.11 Wave 3** — self-heal, response miner, on-demand specialists, docker labs, memory guard, bench harness
 - **v0.10 Wave 2** — Burp bridge, MCP server, sqlmap/msf/ZAP adapters, ASM+CI gate, Postgres board, deploy/
@@ -260,6 +254,6 @@ MIT — see [LICENSE](LICENSE).
 
 *"In the sprawl of zeros and ones, we are the zero that makes everything possible."*
 
-`▓ NIGHT CITY GRID // ZER0CODE v0.12 // STAY CHROME ▓`
+`▓ NIGHT CITY GRID // ZER0CODE v0.13 // STAY CHROME ▓`
 
 </div>
