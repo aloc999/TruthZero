@@ -1254,13 +1254,40 @@ if HAS_TEXTUAL:
                 if self.show_panel:
                     self.show_panel = False
                     self.query_one("#side-panel").remove_class("visible")
-                    return
             except Exception:
                 pass
             try:
                 self.query_one("#user-input", Input).focus()
             except Exception:
                 pass
+            try:
+                self._log_esc_state()
+            except Exception:
+                pass
+            try:
+                self.refresh(layout=True)
+            except Exception:
+                pass
+
+        def _log_esc_state(self) -> None:
+            """Best-effort ESC forensics: visibility snapshot to a log file."""
+            import datetime
+            from pathlib import Path
+            states = {}
+            for wid in ("#welcome", "#main-area", "#header-bar",
+                        "#conversation", "#input-box", "#side-panel"):
+                try:
+                    w = self.query_one(wid)
+                    states[wid] = bool(w.display)
+                except Exception as e:
+                    states[wid] = f"ERR:{type(e).__name__}"
+            line = (f"{datetime.datetime.now().isoformat()} esc "
+                    f"screens={[type(s).__name__ for s in self.screen_stack]} "
+                    f"{states}\n")
+            log = Path.home() / ".zer0code" / "tui-debug.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with open(log, "a") as fh:
+                fh.write(line)
 
         def action_rerun_scan(self) -> None:
             """Ctrl+R: re-run the last /scan with identical args."""

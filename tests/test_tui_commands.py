@@ -201,6 +201,10 @@ async def test_escape_closes_panel_and_refocuses():
         await pilot.press("escape")  # ESC closes panel
         await pilot.pause(0.3)
         assert app.show_panel is False
+        # main chrome still visible after ESC
+        assert app.query_one("#welcome").display is not False
+        assert app.query_one("#header-bar").display is not False
+        assert app.query_one("#main-area").display is not False
 
 
 @pytest.mark.asyncio
