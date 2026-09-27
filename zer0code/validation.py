@@ -63,6 +63,14 @@ class ConfigValidator:
                                        or config_dict[key] < 0):
                 errors.append(f"{key} must be a non-negative integer, got {config_dict[key]}")
 
+        jev_backend = config_dict.get("jev_backend", "")
+        if jev_backend and jev_backend not in ("auto", "builtin", "external"):
+            errors.append(f"jev_backend must be auto|builtin|external, got {jev_backend}")
+
+        jev_min = config_dict.get("jev_min_severity", "")
+        if jev_min and jev_min.lower() not in ("critical", "high", "medium", "low", "info"):
+            errors.append(f"jev_min_severity must be a severity level, got {jev_min}")
+
         return errors
 
     @staticmethod

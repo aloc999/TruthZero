@@ -110,7 +110,7 @@
           font-size="17" letter-spacing="3" fill="#05ffa1" filter="url(#soft)">&#62;&#62; autonomous AI pentest swarm // licensed runners only &#60;&#60;</text>
 
     <!-- footer strip -->
-    <text x="48" y="436" font-family="monospace" font-size="15" fill="#7b2ff7" letter-spacing="2">NIGHT CITY GRID // v0.13</text>
+    <text x="48" y="436" font-family="monospace" font-size="15" fill="#7b2ff7" letter-spacing="2">NIGHT CITY GRID // v0.14</text>
     <text x="1152" y="436" font-family="monospace" font-size="15" fill="#7b2ff7" text-anchor="end" letter-spacing="2">STAY CHROME</text>
 
     <rect x="0" y="0" width="1200" height="480" fill="url(#scan)" opacity="0.35"/>

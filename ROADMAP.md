@@ -50,6 +50,14 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
 | Green test suite | **stable** | 43 passed, 0 failed |
 
+## v0.14 — Real Jev (shipped)
+| Feature | Status | Notes |
+|---|---|---|
+| External TypeSafe Jev backend (System One API, opt-in) | **beta** | `scoring/jev_external.py`, `TYPESAFE_API_KEY` |
+| AND-gate: drop only if builtin + external agree | **stable** | conflict/abstain → keep for human review |
+| Severity gate (external only at high+) | **stable** | `jev_min_severity`, paid calls go where FPs cost most |
+| Doctor Jev status line | **stable** | builtin-only vs external-ready |
+
 ## v0.13 — Live Grid (shipped)
 | Feature | Status | Notes |
 |---|---|---|

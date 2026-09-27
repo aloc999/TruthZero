@@ -6,8 +6,8 @@
 
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
-[![version](https://img.shields.io/badge/version-v0.13.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
-[![tests](https://img.shields.io/badge/tests-49_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
+[![version](https://img.shields.io/badge/version-v0.14.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
+[![tests](https://img.shields.io/badge/tests-54_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
@@ -59,7 +59,7 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 | Response miner (URLs/params/emails/UUIDs/secrets → board) | **beta** | `zer0code/swarm/miner.py` |
 | Self-healing requests (401/403/415/429/5xx mutations) | **beta** | `zer0code/swarm/selfheal.py` |
 | Adaptive attack-path scoring (`--jev-adaptive`) | **beta** | `zer0code/scoring/adaptive.py` |
-| JEV false-positive filter (`--jev`, fails open) | **beta** | `zer0code/scoring/jev.py` |
+| JEV false-positive filter (builtin + optional TypeSafe second layer, AND-gated, fails open) | **beta** | `--jev`, `TYPESAFE_API_KEY` |
 | CVSS v3.1 FIRST-spec scoring | **stable** | `zer0code/scoring/cvss.py` |
 | Scope defence in depth (tool + executor, fail closed) | **stable** | `agent.py` + `scope.py` |
 | Cleanup registry (SIGINT/crash/budget, reverse-order) | **stable** | `zer0code/cleanup.py` |
@@ -223,6 +223,7 @@ zer0code sessions / memory / doctor / install-tools
 
 // CHANGELOG — how we got here
 
+- **v0.14 Second Opinion** — real TypeSafe Jev backend (opt-in, AND-gated, severity-gated), doctor Jev status
 - **v0.13 Live Grid** — neon SVG hero banner, live dashboard + HTTP API (`serve` for real: findings/SARIF/scan, scope fail-closed), shared headless runner
 - **v0.12** — benchmark suites wired (mini 5/5 + RESULTS.md), pgvector embeddings, Marketplace packaging + release pipeline
 - **v0.11 Wave 3** — self-heal, response miner, on-demand specialists, docker labs, memory guard, bench harness
@@ -254,6 +255,6 @@ MIT — see [LICENSE](LICENSE).
 
 *"In the sprawl of zeros and ones, we are the zero that makes everything possible."*
 
-`▓ NIGHT CITY GRID // ZER0CODE v0.13 // STAY CHROME ▓`
+`▓ NIGHT CITY GRID // ZER0CODE v0.14 // STAY CHROME ▓`
 
 </div>

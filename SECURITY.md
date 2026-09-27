@@ -18,6 +18,14 @@ the Computer Misuse Act, and equivalent laws worldwide.
 Configure scope via `/scope add <target>` (writes `scope.json`) or
 `zer0code scan <target> --scope <target>`.
 
+## External verifiers leak target data
+The builtin JEV filter is 100% local. The **optional external TypeSafe
+Jev backend** (`TYPESAFE_API_KEY`) sends finding titles, details, and
+evidence — i.e. target responses that may hold PII or credentials — to a
+third-party API. Enable it only with explicit client consent and only
+for report-grade severities (default: high+). When in doubt, stay on
+`jev_backend: builtin`.
+
 ## Reporting vulnerabilities in ZER0CODE itself
 Open a GitHub issue with `[SECURITY]` prefix. Do not post exploits publicly
 before a fix is released. The maintainers accept no liability for misuse.

@@ -51,6 +51,10 @@ class ZeroCodeConfig:
     prompt_cache: bool = True      # Claude prompt caching for recon+classifier
     jev_enabled: bool = False      # second-opinion FP filter (fails open)
     jev_adaptive: bool = False     # adaptive attack-path scoring (fails open)
+    jev_backend: str = "auto"      # auto|builtin|external (TypeSafe Jev, opt-in)
+    jev_model: str = "jev-latest"
+    jev_base_url: str = ""
+    jev_min_severity: str = "high"  # external consulted at/above this
     swarm_rounds: int = 6
     swarm_concurrent: int = 4
     orchestrator_base_url: str = ""

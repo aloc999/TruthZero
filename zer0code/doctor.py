@@ -42,12 +42,17 @@ class Doctor:
             "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
             "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
             "DEEPSEEK_API_KEY": os.environ.get("DEEPSEEK_API_KEY"),
+            "TYPESAFE_API_KEY": os.environ.get("TYPESAFE_API_KEY"),
         }
         found = [k for k, v in keys.items() if v]
         if found:
             self._pass("API keys", f"Found: {', '.join(found)}")
         else:
             self._warn("API keys", "No API keys set. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or DEEPSEEK_API_KEY")
+        if os.environ.get("TYPESAFE_API_KEY"):
+            self._pass("Jev", "external TypeSafe backend ready (opt-in second layer)")
+        else:
+            self._pass("Jev", "builtin heuristic only (set TYPESAFE_API_KEY for external second opinion)")
 
     def _check_config(self):
         config_path = Path.home() / ".zer0code" / "config.json"
