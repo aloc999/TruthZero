@@ -1,6 +1,6 @@
-import asyncio
 import statistics
 import time
+
 from truthzero.tools.base import BaseTool, ToolResult
 
 
@@ -60,7 +60,7 @@ class TimingAttackTool(BaseTool):
             std_baseline = statistics.stdev(baseline_times) if len(baseline_times) > 1 else 0
             output += f"  Average: {avg_baseline:.3f}s (±{std_baseline:.3f}s)\n\n"
 
-            output += f"Delay payload test:\n"
+            output += "Delay payload test:\n"
             output += f"  Payload: {delay_payload}\n"
             output += f"  Expected delay: {delay_seconds}s\n"
             delay_elapsed, delay_status, delay_length = await send_request(delay_payload)
@@ -69,21 +69,21 @@ class TimingAttackTool(BaseTool):
             time_diff = delay_elapsed - avg_baseline
             threshold = delay_seconds * 0.7
 
-            output += f"RESULT:\n"
+            output += "RESULT:\n"
             output += f"  Baseline avg: {avg_baseline:.3f}s\n"
             output += f"  Delay response: {delay_elapsed:.3f}s\n"
             output += f"  Difference: {time_diff:.3f}s\n"
             output += f"  Threshold: {threshold:.1f}s (70% of expected {delay_seconds}s)\n\n"
 
             if time_diff >= threshold:
-                output += f"⚠️ TIME-BASED VULNERABILITY CONFIRMED\n"
+                output += "⚠️ TIME-BASED VULNERABILITY CONFIRMED\n"
                 output += f"Response was {time_diff:.1f}s slower than baseline.\n"
-                output += f"This strongly indicates time-based blind injection.\n"
+                output += "This strongly indicates time-based blind injection.\n"
             elif time_diff >= delay_seconds * 0.3:
-                output += f"⚠️ POSSIBLE time-based vulnerability (inconclusive)\n"
+                output += "⚠️ POSSIBLE time-based vulnerability (inconclusive)\n"
                 output += f"Response was {time_diff:.1f}s slower — retry with longer delay.\n"
             else:
-                output += f"✓ No significant timing difference — likely not vulnerable.\n"
+                output += "✓ No significant timing difference — likely not vulnerable.\n"
 
             return ToolResult(output=output, success=True)
         except Exception as e:

@@ -14,7 +14,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from truthzero.swarm.blackboard import (
-    Blackboard, CLASSIFY_THRESHOLD, EXPLOIT_THRESHOLD,
+    CLASSIFY_THRESHOLD,
+    EXPLOIT_THRESHOLD,
+    Blackboard,
 )
 
 

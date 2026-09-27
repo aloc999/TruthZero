@@ -1,6 +1,4 @@
-import sys
 import time
-
 
 _start_time = time.monotonic()
 

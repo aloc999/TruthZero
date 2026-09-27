@@ -1,7 +1,7 @@
 import asyncio
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 
 @dataclass

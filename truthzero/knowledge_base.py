@@ -1,12 +1,7 @@
-import asyncio
-import json
 import os
-import time
 from pathlib import Path
-from typing import Optional
 
 import aiosqlite
-
 
 KB_DIR = Path.home() / ".truthzero" / "knowledge"
 KB_DB = KB_DIR / "security_kb.db"

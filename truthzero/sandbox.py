@@ -2,8 +2,6 @@ import asyncio
 import json
 import os
 import shutil
-from typing import Optional
-
 
 SANDBOX_IMAGE = "kalilinux/kali-rolling"
 CONTAINER_NAME = "truthzero-sandbox"

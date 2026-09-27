@@ -1,6 +1,3 @@
-import asyncio
-import json
-from typing import Optional
 from truthzero.tools.base import BaseTool, ToolResult
 
 
@@ -59,7 +56,7 @@ class AuthSessionTool(BaseTool):
 
                     output = f"Login: {resp.status_code} {resp.reason_phrase}\n"
                     output += f"Cookies captured: {list(self._cookies.keys())}\n"
-                    output += f"Response headers:\n"
+                    output += "Response headers:\n"
                     for k, v in resp.headers.items():
                         if k.lower() in ("set-cookie", "location", "authorization", "x-csrf-token"):
                             output += f"  {k}: {v}\n"

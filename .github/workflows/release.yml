@@ -22,7 +22,8 @@ jobs:
   publish-pypi:
     needs: test
     runs-on: ubuntu-latest
-    if: ${{ secrets.PYPI_API_TOKEN != '' }}
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,12 +31,15 @@ jobs:
           python-version: '3.11'
       - run: pip install build
       - run: python -m build
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to PyPI (skipped without PYPI_API_TOKEN)
+        if: env.PYPI_API_TOKEN != ''
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
   move-major-tag:
     needs: publish-pypi
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write

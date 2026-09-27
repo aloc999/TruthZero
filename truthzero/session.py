@@ -1,10 +1,10 @@
-import aiosqlite
 import json
 import os
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Optional
+
+import aiosqlite
 
 
 @dataclass

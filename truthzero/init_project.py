@@ -1,8 +1,5 @@
 import json
-import os
-import subprocess
 from pathlib import Path
-from typing import Optional
 
 from truthzero.file_index import FileIndex
 

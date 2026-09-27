@@ -5,24 +5,23 @@ import os
 import time
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
-from truthzero.config import TruthZeroConfig
-from truthzero.cost import CostTracker
-from truthzero.context import ContextCompactor, ProjectContext
-from truthzero.hooks import AutoLintHook, HookManager
-from truthzero.memory import LoopDetector, MemoryStore, ReflectionEngine
-from truthzero.permissions import PermissionManager
-from truthzero.providers import get_provider
-from truthzero.providers.base import BaseProvider, ProviderResponse
-from truthzero.session import SessionManager
-from truthzero.tools.base import BaseTool, ToolResult
-from truthzero.retry import RetryHandler, RetryConfig
-from truthzero.vision import VisionInput
-from truthzero.rollback import RollbackManager
-from truthzero.notifications import NotificationManager
 from truthzero.branching import ConversationBrancher
+from truthzero.config import TruthZeroConfig
+from truthzero.context import ContextCompactor, ProjectContext
+from truthzero.cost import CostTracker
 from truthzero.export import SessionExporter
 from truthzero.file_index import FileIndex
-
+from truthzero.hooks import AutoLintHook, HookManager
+from truthzero.memory import LoopDetector, MemoryStore, ReflectionEngine
+from truthzero.notifications import NotificationManager
+from truthzero.permissions import PermissionManager
+from truthzero.providers import get_provider
+from truthzero.providers.base import BaseProvider
+from truthzero.retry import RetryHandler
+from truthzero.rollback import RollbackManager
+from truthzero.session import SessionManager
+from truthzero.tools.base import BaseTool, ToolResult
+from truthzero.vision import VisionInput
 
 SYSTEM_PROMPT = """You are TRUTHZERO — an elite AI-powered penetration testing operator embedded in a terminal environment.
 
@@ -212,7 +211,8 @@ class TruthCoreAgent:
 
         git_context = ""
         try:
-            import asyncio, subprocess
+            import asyncio
+            import subprocess
             branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, timeout=3, cwd=self.project_context.project_root or ".").stdout.strip()
             status = subprocess.run(["git", "status", "--short"], capture_output=True, text=True, timeout=3, cwd=self.project_context.project_root or ".").stdout.strip()
             if branch:
@@ -340,12 +340,12 @@ class TruthCoreAgent:
 
     def _scope_check_tool(self, name: str, arguments: dict, scope) -> str:
         """Return block reason or ''. Fail closed on scope errors."""
-        NETWORK_TOOLS = {
+        network_tools = {
             "bash", "port_scan", "subdomain_enum", "nuclei_scan", "dir_fuzz",
             "tech_detect", "web_fetch", "web_crawl", "http_replay", "dns_lookup",
             "whois_lookup", "js_analyze", "crawler", "screenshot",
         }
-        if name not in NETWORK_TOOLS:
+        if name not in network_tools:
             return ""
         try:
             # Direct target-ish args first (fail closed per-arg).

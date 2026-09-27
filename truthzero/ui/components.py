@@ -1,22 +1,18 @@
 import os
 import time
-import asyncio
-from typing import Optional, AsyncGenerator
+from typing import AsyncGenerator, Optional
 
-from rich.panel import Panel
-from rich.table import Table
-from rich.syntax import Syntax
-from rich.markdown import Markdown
 from rich.console import Console, Group
 from rich.live import Live
-from rich.spinner import Spinner
-from rich.text import Text
-from rich.columns import Columns
+from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.rule import Rule
-from rich.align import Align
+from rich.spinner import Spinner
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
 
-from truthzero.ui.themes import Theme, THEMES
-
+from truthzero.ui.themes import Theme
 
 GRADIENT_BAR = "  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓"
 

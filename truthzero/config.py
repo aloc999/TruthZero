@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field, asdict
-from pathlib import Path
-from typing import Optional, Dict, Any, List
 import json
 import os
-
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 CONFIG_DIR = Path.home() / ".truthzero"
 CONFIG_FILE = CONFIG_DIR / "config.json"

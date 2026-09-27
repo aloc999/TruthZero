@@ -1,21 +1,19 @@
-import os
-from typing import Optional, AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
-from rich.rule import Rule
-from rich.prompt import Confirm
 
-from truthzero.ui.themes import Theme, THEMES
 from truthzero.ui.components import (
     Banner,
-    ToolPanel,
     MemoryPanel,
-    StatusBar,
     ResponseRenderer,
+    StatusBar,
+    ToolPanel,
 )
+from truthzero.ui.themes import THEMES
 
 
 class TerminalUI:

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import shutil
 import socket
 
@@ -371,7 +370,7 @@ class DnsLookupTool(BaseTool):
             return ToolResult(
                 output="",
                 success=False,
-                error=f"No dig/nslookup available; socket fallback only supports A/AAAA records",
+                error="No dig/nslookup available; socket fallback only supports A/AAAA records",
             )
 
 

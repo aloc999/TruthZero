@@ -2,8 +2,6 @@ import base64
 import mimetypes
 import os
 from pathlib import Path
-from typing import Optional
-
 
 SUPPORTED_FORMATS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
 

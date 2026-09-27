@@ -5,7 +5,6 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-
 LANG_SERVERS = {
     ".py": ("pylsp", []),
     ".js": ("typescript-language-server", ["--stdio"]),

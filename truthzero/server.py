@@ -1,11 +1,10 @@
 import asyncio
 import json
-import os
 from typing import Optional
 
 try:
-    from http.server import HTTPServer, BaseHTTPRequestHandler
     import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
     HAS_HTTP = True
 except ImportError:
     HAS_HTTP = False

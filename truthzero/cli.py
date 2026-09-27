@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -18,22 +17,19 @@ from rich.text import Text
 from truthzero import __codename__, __version__
 from truthzero.agent import TruthCoreAgent
 from truthzero.config import CONFIG_DIR, TruthZeroConfig
-from truthzero.cost import CostTracker
 from truthzero.permissions import PermissionManager
 from truthzero.session import SessionManager
-from truthzero.ui.terminal import TerminalUI
-from truthzero.ui.diff import DiffRenderer
 from truthzero.tools import ALL_TOOLS
+from truthzero.tools.git import GitBranchTool, GitCommitTool, GitDiffTool, GitLogTool, GitStatusTool
 from truthzero.tools.security import SECURITY_TOOLS
-from truthzero.tools.git import GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchTool
-from truthzero.branching import ConversationBrancher
+from truthzero.ui.terminal import TerminalUI
 
 VALID_PROVIDERS = ["openai", "anthropic", "deepseek", "ollama"]
 
 GIT_TOOLS = [GitStatusTool, GitDiffTool, GitCommitTool, GitLogTool, GitBranchTool]
 
 
-class _PermissionPending(Exception):
+class _PermissionPendingError(Exception):
     def __init__(self, description):
         self.description = description
 
@@ -104,19 +100,15 @@ async def handle_slash_command(
         ui.console.print(table)
 
     elif cmd == "/model":
-        PROVIDER_MODELS = {
-            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini"],
-            "anthropic": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
-            "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
-            "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2", "codellama"],
-        }
+        from truthzero.providers import PROVIDERS
+        provider_models = {name: list(cls().available_models) for name, cls in PROVIDERS.items()}
         if args:
             config.model = args.strip()
             config.save()
             await agent.initialize()
             ui.console.print(Text(f"  Model switched to: {config.model}", style="bold green"))
         else:
-            models = PROVIDER_MODELS.get(config.provider, [])
+            models = provider_models.get(config.provider, [])
             table = Table(title=f"Models ({config.provider})", border_style="cyan", expand=False)
             table.add_column("#", style="bold cyan", width=4)
             table.add_column("Model", style="white")
@@ -125,7 +117,7 @@ async def handle_slash_command(
                 marker = " ◀" if m == config.model else ""
                 table.add_row(str(i), m, marker)
             ui.console.print(table)
-            ui.console.print(Text(f"  /model <name> or /model <number> to switch", style="dim"))
+            ui.console.print(Text("  /model <name> or /model <number> to switch", style="dim"))
             if args and args.strip().isdigit():
                 idx = int(args.strip()) - 1
                 if 0 <= idx < len(models):
@@ -158,38 +150,39 @@ async def handle_slash_command(
                 marker = " ◀" if p == config.provider else ""
                 table.add_row(str(i), p, marker)
             ui.console.print(table)
-            ui.console.print(Text(f"  /provider <name> or /provider <number> to switch", style="dim"))
+            ui.console.print(Text("  /provider <name> or /provider <number> to switch", style="dim"))
 
     elif cmd == "/switch":
-        _PM = {
-            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o3-mini"],
-            "anthropic": ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
-            "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-pro"],
-            "ollama": ["qwen2.5-coder:14b", "llama3.1", "deepseek-coder-v2"],
+        from truthzero.providers import PROVIDERS
+        provider_models = {name: list(cls().available_models) for name, cls in PROVIDERS.items()}
+        env_keys = {
+            "openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY", "glm": "ZHIPU_API_KEY",
+            "gemini": "GEMINI_API_KEY", "ollama": None, "lmstudio": None,
+            "together": "TRUTHZERO_ORCHESTRATOR_API_KEY", "orcarouter": "TRUTHZERO_ORCHESTRATOR_API_KEY",
         }
-        _EK = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "ollama": None}
         if args:
             parts = args.strip().split(maxsplit=1)
             prov = parts[0].lower()
             if prov not in VALID_PROVIDERS:
                 ui.console.print(Text(f"  Valid: {', '.join(VALID_PROVIDERS)}", style="red"))
                 return False
-            ek = _EK.get(prov)
+            ek = env_keys.get(prov)
             if ek and not os.environ.get(ek):
                 ui.console.print(Text(f"\n  ✗ {ek} not set. Type your API key below (Enter to cancel):\n", style="bold red"))
-                agent._switch_pending = {"step": "enter_key", "provider": prov, "env_key": ek, "model": parts[1].strip() if len(parts) > 1 else None, "pm": _PM}
+                agent._switch_pending = {"step": "enter_key", "provider": prov, "env_key": ek, "model": parts[1].strip() if len(parts) > 1 else None, "pm": provider_models}
                 return False
             config.provider = prov
-            config.model = parts[1].strip() if len(parts) > 1 else (_PM.get(prov, [""])[0])
+            config.model = parts[1].strip() if len(parts) > 1 else (provider_models.get(prov, [""])[0])
             config.save()
             await agent.initialize()
             ui.console.print(Text(f"  ✓ Switched to: {config.provider}/{config.model}", style="bold green"))
         else:
             ui.console.print(Text(f"\n  Current: {config.provider}/{config.model}\n", style="bold cyan"))
-            provs = list(_PM.keys())
+            provs = list(provider_models.keys())
             for i, p in enumerate(provs, 1):
                 marker = " ◀ current" if p == config.provider else ""
-                ek = _EK.get(p)
+                ek = env_keys.get(p)
                 ks = (" ✓" if os.environ.get(ek) else " ✗ no key") if ek else ""
                 line = Text()
                 line.append(f"  [{i}] ", style="bold cyan")
@@ -197,8 +190,8 @@ async def handle_slash_command(
                 line.append(ks, style="green" if "✓" in ks else "red")
                 line.append(marker, style="bold green")
                 ui.console.print(line)
-            ui.console.print(Text(f"\n  Type a number below (Enter to cancel):\n", style="dim"))
-            agent._switch_pending = {"step": "select_provider", "providers": provs, "pm": _PM, "ek": _EK}
+            ui.console.print(Text("\n  Type a number below (Enter to cancel):\n", style="dim"))
+            agent._switch_pending = {"step": "select_provider", "providers": provs, "pm": provider_models, "ek": env_keys}
 
     elif cmd == "/theme":
         if args:
@@ -301,7 +294,7 @@ async def handle_slash_command(
             skill_name = args[7:].strip()
             filepath = loader.create_custom_skill(skill_name, skill_name.replace("-", " ").title(), "Add your methodology here.\n")
             ui.console.print(Text(f"  Created custom skill: {filepath}", style="bold green"))
-            ui.console.print(Text(f"  Edit the file to add your methodology.", style="dim"))
+            ui.console.print(Text("  Edit the file to add your methodology.", style="dim"))
         else:
             skill_name = args.strip()
             skill = loader.get_skill(skill_name)
@@ -423,7 +416,7 @@ async def handle_slash_command(
                 agent.conversation_history = agent.brancher.current_messages
                 ui.console.print(Text(f"  Merged '{source}' into current branch.", style="bold green"))
             else:
-                ui.console.print(Text(f"  Merge failed.", style="red"))
+                ui.console.print(Text("  Merge failed.", style="red"))
         elif args.startswith("delete "):
             name = args[7:].strip()
             if agent.brancher.delete_branch(name):
@@ -624,8 +617,8 @@ async def handle_slash_command(
                 ui.render_error(str(e))
 
     elif cmd == "/update":
-        from truthzero.updater import UpdateChecker
         from truthzero import __version__
+        from truthzero.updater import UpdateChecker
         ui.console.print(Text("  Checking for updates...", style="dim"))
         info = await UpdateChecker.check(__version__)
         if info:
@@ -855,7 +848,7 @@ async def handle_slash_command(
             ui.console.print(Text("  Usage: /scope [add|exclude|wildcard|check|save|load] <target>", style="dim"))
 
     elif cmd == "/workflow" or cmd == "/wf":
-        from truthzero.workflows import WorkflowRunner, WORKFLOWS
+        from truthzero.workflows import WORKFLOWS, WorkflowRunner
         if not args:
             table = Table(title="Bug Bounty Workflows", border_style="magenta")
             table.add_column("Name", style="bold magenta", width=20)
@@ -950,7 +943,7 @@ async def handle_slash_command(
         if not hasattr(agent, '_mcp_client'):
             agent._mcp_client = MCPClient()
 
-        BUILTIN_SERVERS = {
+        builtin_servers = {
             "playwright": MCPServerConfig(name="playwright", command="npx", args=["@playwright/mcp@latest"]),
             "puppeteer": MCPServerConfig(name="puppeteer", command="npx", args=["@anthropic/mcp-server-puppeteer"]),
             "fetch": MCPServerConfig(name="fetch", command="npx", args=["@anthropic/mcp-server-fetch"]),
@@ -959,7 +952,7 @@ async def handle_slash_command(
 
         if not args or args == "list":
             ui.console.print(Text("\n  Available MCP Servers:\n", style="bold cyan"))
-            for name, srv in BUILTIN_SERVERS.items():
+            for name, srv in builtin_servers.items():
                 cmd_str = f"{srv.command} {' '.join(srv.args)}"
                 ui.console.print(Text(f"  [{name}]  {cmd_str}", style="dim"))
             ui.console.print()
@@ -977,9 +970,9 @@ async def handle_slash_command(
         elif args.startswith("connect"):
             server_name = args[8:].strip() if len(args) > 8 else ""
             if not server_name:
-                ui.console.print(Text(f"  Usage: /mcp connect <{'|'.join(BUILTIN_SERVERS.keys())}>", style="dim"))
-            elif server_name in BUILTIN_SERVERS:
-                srv = BUILTIN_SERVERS[server_name]
+                ui.console.print(Text(f"  Usage: /mcp connect <{'|'.join(builtin_servers.keys())}>", style="dim"))
+            elif server_name in builtin_servers:
+                srv = builtin_servers[server_name]
                 agent._mcp_client.add_server(srv)
                 ui.console.print(Text(f"  ◐ Connecting to {server_name}...", style="dim yellow"))
                 try:
@@ -998,7 +991,7 @@ async def handle_slash_command(
                     ui.console.print(Text(f"  ✗ Connection failed: {e}", style="red"))
                     ui.console.print(Text(f"  Make sure Node.js is installed and run: npm install -g {' '.join(srv.args[:1])}", style="dim"))
             else:
-                ui.console.print(Text(f"  Unknown server. Available: {', '.join(BUILTIN_SERVERS.keys())}", style="red"))
+                ui.console.print(Text(f"  Unknown server. Available: {', '.join(builtin_servers.keys())}", style="red"))
 
         elif args == "disconnect":
             await agent._mcp_client.disconnect_all()
@@ -1212,7 +1205,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
     def _confirm_handler(prompt_text):
         if _spinner[0]:
             _spinner[0].stop()
-        raise _PermissionPending(prompt_text)
+        raise _PermissionPendingError(prompt_text)
 
     agent.permissions = PermissionManager(
         confirm_callback=_confirm_handler,
@@ -1237,8 +1230,6 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
             provider=config.provider,
             model=config.model,
         )
-
-    diff_renderer = DiffRenderer()
 
     _last_file_path = [None]
     _tool_timer = [0.0]
@@ -1268,7 +1259,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
 
         tl = Text()
         tl.append(f"  {ts} ", style="dim")
-        tl.append(f"↳ ", style="dim")
+        tl.append("↳ ", style="dim")
         tl.append(f"{elapsed:.1f}s", style="dim green")
         tl.append(f" · {agent.total_tokens:,} tokens", style="dim cyan")
         tl.append(f" · {agent.total_cost}", style="dim cyan")
@@ -1276,7 +1267,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
         console.print(tl)
 
         if _spinner[0]:
-            _spinner[0].update(f"[bold green]  Analyzing results...")
+            _spinner[0].update("[bold green]  Analyzing results...")
             _spinner[0].start()
 
         if name == "read_file" and result.success and _last_file_path[0]:
@@ -1299,7 +1290,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
     console.print()
     logo = Text()
     logo.append("  ▄██▄  ", style="bold green")
-    logo.append(f"TRUTHZERO", style="bold green")
+    logo.append("TRUTHZERO", style="bold green")
     logo.append(f" v{__version__}", style="dim")
     console.print(logo)
 
@@ -1405,8 +1396,8 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
                 sp = agent._switch_pending
                 if sp["step"] == "select_provider":
                     provs = sp["providers"]
-                    _PM = sp["pm"]
-                    _EK = sp["ek"]
+                    provider_models = sp["pm"]
+                    env_keys = sp["ek"]
                     sel = None
                     if user_input.isdigit() and 1 <= int(user_input) <= len(provs):
                         sel = provs[int(user_input) - 1]
@@ -1416,12 +1407,12 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
                         agent._switch_pending = None
                         console.print(Text("  Cancelled.", style="dim"))
                         continue
-                    ek = _EK.get(sel)
+                    ek = env_keys.get(sel)
                     if ek and not os.environ.get(ek):
                         console.print(Text(f"\n  ✗ {ek} not set. Type your API key (Enter to cancel):\n", style="bold red"))
-                        agent._switch_pending = {"step": "enter_key", "provider": sel, "env_key": ek, "model": None, "pm": _PM}
+                        agent._switch_pending = {"step": "enter_key", "provider": sel, "env_key": ek, "model": None, "pm": provider_models}
                     else:
-                        models = _PM.get(sel, [])
+                        models = provider_models.get(sel, [])
                         console.print(Text(f"\n  Models for {sel}:\n", style="bold cyan"))
                         for i, m in enumerate(models, 1):
                             mk = " ◀" if m == config.model else ""
@@ -1430,7 +1421,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
                             ln.append(m, style="bold white")
                             ln.append(mk, style="bold green")
                             console.print(ln)
-                        console.print(Text(f"\n  Type number (Enter for default):\n", style="dim"))
+                        console.print(Text("\n  Type number (Enter for default):\n", style="dim"))
                         agent._switch_pending = {"step": "select_model", "provider": sel, "models": models}
                     continue
 
@@ -1458,7 +1449,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
                             ln.append(f"  [{i}] ", style="bold cyan")
                             ln.append(m, style="bold white")
                             console.print(ln)
-                        console.print(Text(f"\n  Type number (Enter for default):\n", style="dim"))
+                        console.print(Text("\n  Type number (Enter for default):\n", style="dim"))
                         agent._switch_pending = {"step": "select_model", "provider": prov, "models": models}
                     continue
 
@@ -1508,12 +1499,12 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
                                 got_text = True
                             collected_text.append(chunk)
                     break
-                except _PermissionPending as pp:
+                except _PermissionPendingError as pp:
                     _spinner[0] = None
                     agent.conversation_history = agent.conversation_history[:history_len]
                     console.print()
                     console.print(Text(f"  ? {pp.description}", style="bold yellow"))
-                    console.print(Text(f"\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
+                    console.print(Text("\n  Type 'y' to approve, 'n' to deny:\n", style="dim"))
                     agent._permission_pending = {"description": pp.description, "user_input": user_input}
                     break
                 except (OSError, ConnectionError) as e:
@@ -1615,7 +1606,7 @@ async def interactive_session(config: TruthZeroConfig, resume_session: str = "",
 
 
 def _launch_tui_sync(config: TruthZeroConfig, resume: str = "") -> None:
-    from truthzero.tui_app import run_tui, HAS_TEXTUAL
+    from truthzero.tui_app import HAS_TEXTUAL, run_tui
     if not HAS_TEXTUAL:
         print("TUI mode requires 'textual'. Install: pip install truthzero[tui]")
         print("Falling back to REPL mode...")
@@ -1818,10 +1809,10 @@ def scan_cmd(ctx: click.Context, target: str, scope: str, swarm: bool,
              rounds: int, budget: int, jev: bool, jev_adaptive: bool,
              strict: bool, lab: bool, lab_target: str) -> None:
     """Scriptable swarm scan: truthzero scan <target> --scope <scope> --swarm."""
-    from truthzero.headless import run_headless_scan
-    from truthzero.swarm import Blackboard
-    from truthzero.scoring import AdaptiveScorer
     from truthzero.cleanup import GLOBAL_CLEANUP
+    from truthzero.headless import run_headless_scan
+    from truthzero.scoring import AdaptiveScorer
+    from truthzero.swarm import Blackboard
     config = ctx.obj["config"]
     console = Console()
     if lab:
@@ -1964,6 +1955,7 @@ def serve_cmd(port: int) -> None:
 def gate_cmd(sarif_path: str, fail_on: str) -> None:
     """CI quality gate: exit 2 when SARIF hits fail_on severities."""
     import json as _json
+
     from truthzero.asm import CIGate
     console = Console()
     fail = tuple(s.strip().lower() for s in fail_on.split(",") if s.strip())
@@ -2009,6 +2001,7 @@ def asm_cmd(action: str, old: str, new: str) -> None:
 def bench_cmd(suite: str) -> None:
     """Offline benchmark: canned campaign → detection/precision/chain score."""
     import json as _json
+
     from truthzero.bench import run_offline, run_suite
     console = Console()
     if suite == "mini":

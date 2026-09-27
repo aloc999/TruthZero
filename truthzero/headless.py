@@ -9,8 +9,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from truthzero.swarm import Blackboard, SwarmScheduler
 from truthzero.scope import ScopeManager
+from truthzero.swarm import Blackboard, SwarmScheduler
 
 BOARDS_DIR = Path.home() / ".truthzero" / "boards"
 

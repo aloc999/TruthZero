@@ -1,6 +1,6 @@
-import os
 import re
 from pathlib import Path
+
 from truthzero.tools.base import BaseTool, ToolResult
 
 

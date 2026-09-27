@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from truthzero.swarm.blackboard import Blackboard
 from truthzero.scoring.cvss import score_class
+from truthzero.swarm.blackboard import Blackboard
 
 
 @dataclass

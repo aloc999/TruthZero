@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 
 @dataclass
@@ -40,7 +39,7 @@ class MCPClient:
             try:
                 tools = await self._connect_server(name, config)
                 results[name] = tools
-            except Exception as e:
+            except Exception:
                 results[name] = []
         return results
 
@@ -61,9 +60,7 @@ class MCPClient:
             "capabilities": {},
             "clientInfo": {"name": "truthzero", "version": "0.1.0"},
         })
-        response = await self._read_jsonrpc(proc)
-
-        await self._send_jsonrpc_notification(proc, "notifications/initialized", {})
+        await self._read_jsonrpc(proc)
 
         await self._send_jsonrpc(proc, "tools/list", {})
         tools_response = await self._read_jsonrpc(proc)

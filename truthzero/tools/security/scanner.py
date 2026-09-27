@@ -237,7 +237,7 @@ class DirFuzzTool(BaseTool):
 
             except asyncio.TimeoutError:
                 return ToolResult(output="", success=False, error="ffuf timed out after 300s")
-            except Exception as e:
+            except Exception:
                 pass
 
         if shutil.which("gobuster") and wordlist:

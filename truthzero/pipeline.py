@@ -1,7 +1,5 @@
 import time
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 PHASES = ["RECON", "ANALYSIS", "EXPLOIT", "REPORT"]
 

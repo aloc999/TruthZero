@@ -1,7 +1,6 @@
 import asyncio
-import json
-import os
 from pathlib import Path
+
 from truthzero.tools.base import BaseTool, ToolResult
 
 
@@ -68,12 +67,12 @@ class NucleiManagerTool(BaseTool):
     async def _search(self, query: str, severity: str) -> ToolResult:
         if not query:
             return ToolResult(output="", success=False, error="Provide a search query")
-        cmd = f"nuclei -tl"
+        cmd = "nuclei -tl"
         if severity:
             cmd += f" -severity {severity}"
         ok, output = await self._run_cmd(cmd)
         if ok:
-            lines = [l for l in output.strip().split("\n") if query.lower() in l.lower()]
+            lines = [line for line in output.strip().split("\n") if query.lower() in line.lower()]
             if lines:
                 return ToolResult(output=f"{len(lines)} matching templates:\n" + "\n".join(lines[:50]), success=True)
             return ToolResult(output=f"No templates matching '{query}'", success=True)

@@ -24,7 +24,7 @@ import time
 from dataclasses import asdict
 from typing import Callable
 
-from truthzero.swarm.blackboard import Finding, FINDING_HALF_LIVES, DEFAULT_HALF_LIFE
+from truthzero.swarm.blackboard import DEFAULT_HALF_LIFE, FINDING_HALF_LIVES, Finding
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS swarm_findings (

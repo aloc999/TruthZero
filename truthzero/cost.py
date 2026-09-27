@@ -1,6 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Dict
-
 
 PRICING = {
     "gpt-4o": {"input": 2.50, "output": 10.00},

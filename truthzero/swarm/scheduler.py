@@ -16,7 +16,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from truthzero.swarm.agents import SWARM_AGENTS, SwarmAgentSpec
 from truthzero.swarm.blackboard import Blackboard

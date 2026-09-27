@@ -1,9 +1,7 @@
-import asyncio
-import json
-import time
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Optional
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from truthzero.tools.base import BaseTool, ToolResult
 
 
@@ -24,9 +22,9 @@ class OOBHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"ok")
-    do_PUT = do_POST
-    do_DELETE = do_GET
-    do_OPTIONS = do_GET
+    do_PUT = do_POST  # noqa: N815 - BaseHTTPRequestHandler protocol names
+    do_DELETE = do_GET  # noqa: N815 - BaseHTTPRequestHandler protocol names
+    do_OPTIONS = do_GET  # noqa: N815 - BaseHTTPRequestHandler protocol names
 
 
 class OOBServerTool(BaseTool):
@@ -60,12 +58,12 @@ class OOBServerTool(BaseTool):
                 ip = socket.gethostbyname(socket.gethostname())
                 output = f"OOB server started on 0.0.0.0:{port}\n"
                 output += f"Your IP: {ip}\n\n"
-                output += f"Use in payloads:\n"
+                output += "Use in payloads:\n"
                 output += f"  SSRF: http://{ip}:{port}/ssrf-test\n"
                 output += f"  XXE:  http://{ip}:{port}/xxe-test\n"
                 output += f"  RCE:  curl http://{ip}:{port}/rce-test\n"
-                output += f"  DNS:  (use interact.sh for DNS OOB)\n\n"
-                output += f"Check callbacks: /oob check"
+                output += "  DNS:  (use interact.sh for DNS OOB)\n\n"
+                output += "Check callbacks: /oob check"
                 return ToolResult(output=output, success=True)
             except Exception as e:
                 return ToolResult(output="", success=False, error=str(e))

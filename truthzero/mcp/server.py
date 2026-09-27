@@ -86,6 +86,7 @@ def _call(name: str, args: dict) -> str:
             return json.dumps({"score": score, "severity": sev})
         if name == "burp_status":
             import asyncio
+
             from truthzero.tools.burp_bridge import BurpBridgeTool
             res = asyncio.run(BurpBridgeTool().execute(
                 action="status", base_url=args.get("base_url", "")))

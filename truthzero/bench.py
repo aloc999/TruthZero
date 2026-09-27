@@ -13,12 +13,11 @@ Numbers are harness-local until real benchmark suites are wired.
 """
 from __future__ import annotations
 
-import asyncio
 import time
 from pathlib import Path
 
-from truthzero.swarm import Blackboard, SwarmScheduler
 from truthzero.scoring import AdaptiveScorer
+from truthzero.swarm import Blackboard, SwarmScheduler
 
 SEEDED = ["bola-idor", "xss-stored", "sqli-login", "ssrf-metadata", "jwt-none"]
 

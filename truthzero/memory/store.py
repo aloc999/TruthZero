@@ -1,4 +1,3 @@
-import aiosqlite
 import json
 import math
 import os
@@ -6,6 +5,7 @@ import re
 import time
 from typing import Optional
 
+import aiosqlite
 
 STOPWORDS = {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",

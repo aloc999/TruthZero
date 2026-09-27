@@ -1,9 +1,6 @@
 import json
-import os
 import time
 from pathlib import Path
-from typing import Optional
-
 
 PAYLOAD_DIR = Path.home() / ".truthzero" / "payloads"
 

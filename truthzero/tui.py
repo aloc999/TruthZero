@@ -1,4 +1,3 @@
-import os
 import shutil
 from typing import Optional
 
@@ -6,9 +5,8 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from rich.text import Text
 from rich.table import Table
-
+from rich.text import Text
 
 MIN_WIDTH = 60
 MIN_HEIGHT = 15

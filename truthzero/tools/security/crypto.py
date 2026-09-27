@@ -81,7 +81,7 @@ class HashIdentifyTool(BaseTool):
                 matches.append(pattern)
 
         output_lines = [
-            f"[Hash Identification]",
+            "[Hash Identification]",
             f"Input: {hash_value}",
             f"Length: {len(hash_value)}",
             "",
@@ -380,7 +380,7 @@ class EncoderDecoderTool(BaseTool):
         output_lines = [
             f"[{operation.title()}] {enc_type}",
             f"Input: {input_str[:200]}{'...' if len(input_str) > 200 else ''}",
-            f"Output:",
+            "Output:",
             result,
         ]
 
@@ -451,7 +451,7 @@ class EncoderDecoderTool(BaseTool):
             output_parts.append("=== JWT Header ===")
             output_parts.append(json.dumps(header, indent=2))
         except Exception as e:
-            output_parts.append(f"=== JWT Header (raw) ===")
+            output_parts.append("=== JWT Header (raw) ===")
             output_parts.append(f"Error parsing: {e}")
             try:
                 output_parts.append(b64_decode_part(parts[0]))
@@ -488,7 +488,7 @@ class EncoderDecoderTool(BaseTool):
                 except Exception:
                     pass
         except Exception as e:
-            output_parts.append(f"=== JWT Payload (raw) ===")
+            output_parts.append("=== JWT Payload (raw) ===")
             output_parts.append(f"Error parsing: {e}")
             try:
                 output_parts.append(b64_decode_part(parts[1]))

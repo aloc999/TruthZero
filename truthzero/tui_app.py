@@ -1,28 +1,25 @@
-import asyncio
 import os
 import time
 from datetime import datetime
 from typing import Optional
 
+from rich.console import Group
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich.syntax import Syntax
-from rich.console import Group
-from rich import box
 
 HAS_TEXTUAL = False
 try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
-    from textual.widgets import Footer, Input, RichLog, Static, OptionList, Button
-    from textual.widgets.option_list import Option
-    from textual.screen import ModalScreen
     from textual.reactive import reactive
+    from textual.screen import ModalScreen
     from textual.suggester import SuggestFromList
     from textual.timer import Timer
+    from textual.widgets import Button, Footer, Input, OptionList, RichLog, Static
+    from textual.widgets.option_list import Option
     HAS_TEXTUAL = True
 except ImportError:
     pass
@@ -448,9 +445,6 @@ if HAS_TEXTUAL:
             inp.focus()
 
         def on_mount(self) -> None:
-            pal = self._tui_pal
-            conv = self.query_one("#conversation", RichLog)
-
             try:
                 self._render_side_home()
             except Exception:
@@ -461,9 +455,9 @@ if HAS_TEXTUAL:
 
         def _render_side_home(self) -> None:
             """Side panel default: live GRID card so it never looks dead."""
-            from textual.widgets import RichLog as _RL
+            from textual.widgets import RichLog
             pal = self._tui_pal
-            side = self.query_one("#side-panel", _RL)
+            side = self.query_one("#side-panel", RichLog)
             side.clear()
             side.write(Text("  ◢ GRID", style=_st(pal, "accent")))
             if self.agent:
@@ -583,7 +577,6 @@ if HAS_TEXTUAL:
                 self.call_from_thread(self._show_tool_call, name, args)
 
             def on_tool_result(name, result, hook_msgs=None):
-                pal = self._tui_pal
                 self.call_from_thread(self._show_tool_result, name, result)
 
             self.agent.set_callbacks(on_tool_call=on_tool_call, on_tool_result=on_tool_result)
@@ -592,7 +585,6 @@ if HAS_TEXTUAL:
         async def _run_agent_stream(self, user_input: str) -> None:
             pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
-            ts = self._ts()
             collected_text = []
             elapsed = 0.0
 
@@ -989,7 +981,7 @@ if HAS_TEXTUAL:
                         conv.write(Text(f"  Session {sid} not found.", style=_st(pal, "err", bold=False)))
                 elif args.startswith("title ") and self.agent and self.agent.session_id:
                     await sm.update_title(self.agent.session_id, args[6:].strip())
-                    conv.write(Text(f"  Title updated.", style=_st(pal, "primary")))
+                    conv.write(Text("  Title updated.", style=_st(pal, "primary")))
                 elif args.startswith("delete "):
                     await sm.delete_session(args[7:].strip())
                     conv.write(Text(f"  Deleted {args[7:].strip()}.", style=_st(pal, "primary")))
@@ -1014,8 +1006,8 @@ if HAS_TEXTUAL:
                 conv.write(Text(f"\n  {doc.summary}\n", style="dim"))
 
             elif command == "/init":
+
                 from truthzero.init_project import ProjectInitializer
-                from pathlib import Path
                 pi = ProjectInitializer()
                 fp = pi.save()
                 conv.write(Text(f"  Generated → {fp}", style=_st(pal, "primary")))
@@ -1121,17 +1113,17 @@ if HAS_TEXTUAL:
                         elif t == "--jev":
                             jev = True
                     if not bad:
-                        from truthzero.scope import ScopeManager as _SM
-                        _sm = _SM()
+                        from truthzero.scope import ScopeManager
+                        _sm = ScopeManager()
                         for _s in [p.strip() for p in scope.split(",") if p.strip()]:
                             _sm.add_in_scope(_s)
                         if not _sm.is_in_scope(target):
                             conv.write(Text(f"  Target '{target}' is OUT OF SCOPE", style=_st(pal, "err", bold=False)))
                         else:
                             conv.write(Text(f"  Hunting {target} [{mode}]…", style=_st(pal, "accent")))
-                            from textual.widgets import RichLog as _RL
+                            from textual.widgets import RichLog
                             try:
-                                _side = self.query_one("#side-panel", _RL)
+                                _side = self.query_one("#side-panel", RichLog)
                                 _side.clear()
                                 if not self.show_panel:
                                     self.show_panel = True

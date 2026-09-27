@@ -3,7 +3,6 @@ import difflib
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from rich.syntax import Syntax
 
 
 class DiffRenderer:

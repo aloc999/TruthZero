@@ -1,4 +1,3 @@
-import json
 from truthzero.tools.base import BaseTool, ToolResult
 
 

@@ -12,10 +12,9 @@ Ports the Pentest-Swarm-AI pheromone-lifecycle concept to Python:
 from __future__ import annotations
 
 import json
-import math
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 

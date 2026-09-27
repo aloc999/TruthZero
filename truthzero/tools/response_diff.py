@@ -1,6 +1,6 @@
-import asyncio
 import difflib
 import time
+
 from truthzero.tools.base import BaseTool, ToolResult
 
 
@@ -51,7 +51,7 @@ class ResponseDiffTool(BaseTool):
                     resp_false = await client.request(method, url, headers=req_headers, content=body_false)
                     time_false = time.monotonic() - t2
 
-            output = f"RESPONSE COMPARISON\n"
+            output = "RESPONSE COMPARISON\n"
             output += f"{'─' * 60}\n"
             output += f"  TRUE  ({true_value}): {resp_true.status_code} | {len(resp_true.text)} bytes | {time_true:.3f}s\n"
             output += f"  FALSE ({false_value}): {resp_false.status_code} | {len(resp_false.text)} bytes | {time_false:.3f}s\n"
@@ -62,24 +62,24 @@ class ResponseDiffTool(BaseTool):
             time_diff = abs(time_true - time_false)
             content_diff = resp_true.text != resp_false.text
 
-            output += f"ANALYSIS:\n"
+            output += "ANALYSIS:\n"
             output += f"  Status code differs: {'YES ⚠️' if status_diff else 'no'}\n"
             output += f"  Content length diff: {length_diff} bytes {'⚠️' if length_diff > 10 else ''}\n"
             output += f"  Timing difference: {time_diff:.3f}s {'⚠️ POSSIBLE TIME-BASED' if time_diff > 3 else ''}\n"
             output += f"  Content differs: {'YES ⚠️' if content_diff else 'no'}\n\n"
 
             if status_diff or length_diff > 10 or content_diff:
-                output += f"⚠️ DIFFERENCES DETECTED — possible blind vulnerability\n\n"
+                output += "⚠️ DIFFERENCES DETECTED — possible blind vulnerability\n\n"
                 if content_diff:
                     true_lines = resp_true.text[:2000].splitlines()
                     false_lines = resp_false.text[:2000].splitlines()
                     diff = list(difflib.unified_diff(false_lines, true_lines, lineterm="", n=2))
                     if diff:
-                        output += f"DIFF (first differences):\n"
+                        output += "DIFF (first differences):\n"
                         for line in diff[:30]:
                             output += f"  {line}\n"
             else:
-                output += f"✓ No significant differences — likely not vulnerable via this parameter\n"
+                output += "✓ No significant differences — likely not vulnerable via this parameter\n"
 
             return ToolResult(output=output, success=True)
         except Exception as e:
