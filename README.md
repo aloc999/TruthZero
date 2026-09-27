@@ -6,8 +6,8 @@
 
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
-[![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/TRUTHZERO)
-[![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/TRUTHZERO)
+[![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/TruthZero)
+[![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/TruthZero)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
@@ -31,9 +31,9 @@ Three street laws power the swarm (not a pipeline):
 ```
 
 ```bash
-pipx install truthzero                   # dari PyPI (setelah rilis)
-# atau langsung dari GitHub:
-pipx install git+https://github.com/aloc999/TRUTHZERO.git
+pipx install truthzero                   # from PyPI (after first release)
+# or straight from GitHub:
+pipx install git+https://github.com/aloc999/TruthZero.git
 export ANTHROPIC_API_KEY="sk-ant-..."     # or Together/Gemini/Ollama…
 
 truthzero lab up crapi                     # spin up a legal vuln target (:8888)
@@ -202,7 +202,7 @@ Full policy: [SECURITY.md](SECURITY.md).
 ```bash
 pipx install truthzero
 # or from source:
-git clone https://github.com/aloc999/TRUTHZERO.git && cd TRUTHZERO && pipx install -e .
+git clone https://github.com/aloc999/TruthZero.git && cd TruthZero && pipx install -e .
 ```
 
 Requirements: Python 3.10+. Full chrome optionally: `apt install subfinder nmap nuclei ffuf sqlmap metasploit-framework`, `docker` for labs, Burp + REST API extension for the bridge, Postgres 16 + pgvector for the memory board.
