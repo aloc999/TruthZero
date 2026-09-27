@@ -21,13 +21,6 @@ from typing import Any, Callable, Optional
 from zer0code.swarm.agents import SWARM_AGENTS, SwarmAgentSpec
 from zer0code.swarm.blackboard import Blackboard
 
-# Mine object references so one leak becomes cross-endpoint BOLA probes.
-OBJECT_REF_RE = re.compile(
-    r'(?:(?:"|\b)(?:id|user_id|account_id|uuid|guid|email|order_id|invoice_id)'
-    r'"?\s*[:=]\s*"?([\w\-.@]{3,80}))',
-    re.IGNORECASE,
-)
-
 
 @dataclass
 class SwarmResult:

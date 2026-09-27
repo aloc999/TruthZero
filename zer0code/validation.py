@@ -2,7 +2,8 @@ from dataclasses import fields
 from typing import Any, Optional
 
 
-VALID_PROVIDERS = {"openai", "anthropic", "deepseek", "ollama"}
+VALID_PROVIDERS = {"openai", "anthropic", "deepseek", "ollama",
+                   "together", "gemini", "lmstudio", "orcarouter"}
 VALID_THEMES = {"hacker", "dark", "minimal"}
 
 
@@ -50,6 +51,17 @@ class ConfigValidator:
         budget = config_dict.get("token_budget", None)
         if budget is not None and (not isinstance(budget, (int, float)) or budget < 0):
             errors.append(f"token_budget must be a positive number, got {budget}")
+
+        for key in ("strict_llm", "prompt_cache", "jev_enabled", "jev_adaptive",
+                    "memory_enabled", "auto_approve_tools", "auto_lint",
+                    "session_auto_save", "plugins_enabled", "notifications_enabled"):
+            if key in config_dict and not isinstance(config_dict[key], bool):
+                errors.append(f"{key} must be a boolean, got {config_dict[key]}")
+
+        for key in ("swarm_rounds", "swarm_concurrent", "max_turns", "api_server_port"):
+            if key in config_dict and (not isinstance(config_dict[key], int)
+                                       or config_dict[key] < 0):
+                errors.append(f"{key} must be a non-negative integer, got {config_dict[key]}")
 
         return errors
 

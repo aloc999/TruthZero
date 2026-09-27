@@ -1,11 +1,20 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>ZER0CODE Swarm Dashboard (alpha)</title>
+<html><head><meta charset="utf-8"><title>ZER0CODE Swarm Dashboard</title>
 <style>body{background:#0a0e14;color:#c9d1d9;font-family:monospace;padding:24px}
-.card{border:1px solid #1f6feb33;border-radius:8px;padding:16px;margin:12px 0}
-.hot{color:#3fb950}.sev-high{color:#f85149}.sev-medium{color:#d29922}</style></head>
-<body><h1>⚡ ZER0CODE Swarm Dashboard <small>(alpha — wiring to live campaigns in progress)</small></h1>
-<div class="card">API: <code>POST /api/scan {target, scope}</code> · <code>GET /api/findings</code> · SARIF at <code>/api/sarif</code></div>
-<div class="card" id="board">Blackboard: polling <code>/api/findings</code>…</div>
-<script>setInterval(async()=>{try{const r=await fetch('/api/findings');const j=await r.json();
-document.getElementById('board').textContent='Findings: '+JSON.stringify(j).slice(0,500)}catch(e){}},3000)</script>
+.card{border:1px solid #ff2a6d55;border-radius:8px;padding:16px;margin:12px 0}
+.hot{color:#3fb950}.sev-high{color:#f85149}.sev-medium{color:#d29922}
+h1{color:#00f0ff}small{color:#7b2ff7}</style></head>
+<body><h1>⚡ ZER0CODE Swarm Dashboard <small>// live</small></h1>
+<div class="card">API: <code>POST /api/scan {target, scope, rounds}</code> · <code>GET /api/findings?board_file=…</code> · SARIF at <code>/api/sarif?board_file=…</code></div>
+<div class="card">Scan: <input id="t" placeholder="target (in scope)" size="30"> <button onclick="scan()">run swarm</button> <span id="st"></span></div>
+<div class="card" id="board">Blackboard: run a scan, then polling…</div>
+<script>let bf='';
+async function scan(){const t=document.getElementById('t').value;if(!t)return;
+document.getElementById('st').textContent='hunting…';
+const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:t,scope:t})});
+const j=await r.json();bf=j.board_file||'';
+document.getElementById('st').textContent=r.ok?`${j.confirmed} confirmed / ${j.findings_total} findings`:'ERR: '+(j.error||r.status);poll()}
+async function poll(){if(!bf)return;try{const r=await fetch('/api/findings?board_file='+encodeURIComponent(bf));const j=await r.json();
+document.getElementById('board').textContent='Findings: '+JSON.stringify(j.summary)+' | '+j.findings.slice(0,8).map(f=>`[${f.ftype} ${f.severity}] ${f.title}`).join(' · ')}catch(e){}}
+setInterval(poll,5000)</script>
 </body></html>

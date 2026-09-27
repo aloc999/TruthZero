@@ -50,3 +50,16 @@ def test_sanitize():
     result = ConfigValidator.sanitize(d)
     assert result["provider"] == "openai"
     assert result["theme"] == "hacker"
+
+def test_validation_all_providers():
+    for p in ("openai", "anthropic", "deepseek", "ollama",
+              "together", "gemini", "lmstudio", "orcarouter"):
+        assert ConfigValidator.validate({"provider": p}) == [], p
+
+def test_validation_swarm_keys():
+    good = {"strict_llm": True, "prompt_cache": False, "jev_enabled": True,
+            "jev_adaptive": False, "swarm_rounds": 6, "swarm_concurrent": 4,
+            "max_turns": 25, "api_server_port": 7777}
+    assert ConfigValidator.validate(good) == []
+    bad = {"strict_llm": "yes", "swarm_rounds": -1, "api_server_port": "x"}
+    assert len(ConfigValidator.validate(bad)) == 3
