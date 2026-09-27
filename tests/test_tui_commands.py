@@ -131,3 +131,45 @@ async def test_mounted_theme_and_provider():
     assert getattr(cfg, "saved", False) is True
     assert cfg.provider == "together"
     assert app._tui_pal["primary"] == "#ff2a6d"
+
+
+@pytest.mark.asyncio
+async def test_model_picker_select_and_cancel():
+    from zer0code.tui_app import (
+        build_tui_css, tui_palette, PickerScreen,
+    )
+    from types import SimpleNamespace
+
+    class Cfg(SimpleNamespace):
+        def save(self):
+            self.saved = True
+
+    cfg = Cfg(provider="openai", model="gpt-4o", theme="cyberpunk",
+              memory_enabled=False)
+    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+                                    tui_palette("cyberpunk"))
+    app = ZeroCodeTUI(agent=None, config=cfg)
+    async with app.run_test(size=(100, 32)) as pilot:
+        for ch in "/model":
+            await pilot.press(ch)
+        await pilot.press("enter")
+        await pilot.pause(0.6)
+        assert isinstance(app.screen, PickerScreen)
+        await pilot.press("down", "down", "enter")
+        await pilot.pause(0.5)
+        assert cfg.model == "gpt-4-turbo"
+        assert cfg.saved is True
+        for ch in "/provider":
+            await pilot.press(ch)
+        await pilot.press("enter")
+        await pilot.pause(0.6)
+        assert isinstance(app.screen, PickerScreen)
+        await pilot.press("escape")
+        await pilot.pause(0.4)
+        assert cfg.provider == "openai"  # cancel keeps value
+        await pilot.press("ctrl+o")
+        await pilot.pause(0.5)
+        assert isinstance(app.screen, PickerScreen)
+        await pilot.press("escape")
+        ib = app.query_one("#input-box")
+        assert ib.outer_size.height == 3  # compact chat box

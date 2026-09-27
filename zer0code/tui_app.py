@@ -14,7 +14,9 @@ try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
-    from textual.widgets import Footer, Input, RichLog, Static
+    from textual.widgets import Footer, Input, RichLog, Static, OptionList
+    from textual.widgets.option_list import Option
+    from textual.screen import ModalScreen
     from textual.reactive import reactive
     from textual.suggester import SuggestFromList
     from textual.timer import Timer
@@ -146,6 +148,28 @@ if HAS_TEXTUAL:
                 t.append(f"  ({self.elapsed:.1f}s)", style="dim")
             return t
 
+    class PickerScreen(ModalScreen):
+        """Opencode-style picker: ↑/↓ + enter to pick, esc cancels."""
+
+        def __init__(self, title: str, options: list[str]):
+            super().__init__()
+            self._title = title
+            self._options = options
+
+        def compose(self) -> ComposeResult:
+            yield Static(f"  ◢ {self._title}  (esc cancels)", id="picker-title")
+            yield OptionList(
+                *[Option(o, id=f"opt-{i}") for i, o in enumerate(self._options)],
+                id="picker-list",
+            )
+
+        def on_mount(self) -> None:
+            self.query_one("#picker-list", OptionList).focus()
+
+        def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+            idx = int(event.option.id.split("-")[1])
+            self.dismiss(self._options[idx])
+
     class ZeroCodeTUI(App):
         TITLE = "ZER0CODE"
 
@@ -204,8 +228,9 @@ if HAS_TEXTUAL:
 
         #input-box {
             dock: bottom;
-            height: auto;
-            max-height: 6;
+            height: 3;
+            min-height: 3;
+            max-height: 3;
             padding: 0 1;
             background: $bg;
         }
@@ -218,6 +243,21 @@ if HAS_TEXTUAL:
 
         #input-box Input:focus {
             border: tall $hot;
+        }
+
+        #picker-title {
+            background: $surface;
+            color: $primary;
+            padding: 1 2 0 2;
+        }
+
+        #picker-list {
+            border: solid $primary;
+            background: $surface;
+            height: auto;
+            max-height: 18;
+            width: 60;
+            align-horizontal: center;
         }
 
         #status-bar {
@@ -240,6 +280,7 @@ if HAS_TEXTUAL:
             Binding("ctrl+l", "clear_conv", "Clear", show=True),
             Binding("ctrl+d", "app_exit", "Exit", show=True),
             Binding("ctrl+t", "toggle_dark", "Theme", show=True),
+            Binding("ctrl+o", "pick_model", "Model", show=True),
             Binding("ctrl+f", "search_conv", "Search", show=True),
             Binding("ctrl+s", "toggle_scroll", "Scroll", show=False),
             Binding("ctrl+y", "copy_last", "Copy", show=True),
@@ -614,8 +655,8 @@ if HAS_TEXTUAL:
                     ("/tools", "List all tools"),
                     ("/status", "Show status"),
                     ("/config", "Show configuration"),
-                    ("/model <name>", "Switch model"),
-                    ("/provider <name>", "Switch provider"),
+                    ("/model", "Pick model (list)"),
+                    ("/provider", "Pick provider (list)"),
                     ("/skill [name]", "List/load skills"),
                     ("/persona [name]", "Switch persona"),
                     ("/template <n> <t>", "Run template"),
@@ -638,7 +679,8 @@ if HAS_TEXTUAL:
                     ("Ctrl+B", "Toggle side panel"),
                     ("Ctrl+F", "Search conversation"),
                     ("Ctrl+L", "Clear"),
-                    ("Ctrl+T", "Toggle theme"),
+                    ("Ctrl+T", "Cycle theme"),
+                    ("Ctrl+O", "Pick model"),
                     ("Ctrl+D", "Exit"),
                     ("Up/Down", "Input history"),
                 ]
@@ -680,10 +722,15 @@ if HAS_TEXTUAL:
             elif command == "/model":
                 if args and self.config:
                     self.config.model = args.strip()
-                    self.config.save()
+                    try:
+                        self.config.save()
+                    except Exception:
+                        pass
                     conv.write(Text(f"  Model → {self.config.model}", style=_st(pal, "primary")))
                     self._update_status()
                     self._update_header()
+                elif self.config:
+                    self._open_model_picker()
                 else:
                     conv.write(Text(f"  Current: {self.config.model if self.config else '?'}", style="dim"))
 
@@ -702,6 +749,8 @@ if HAS_TEXTUAL:
                         self._update_header()
                     else:
                         conv.write(Text(f"  Valid: {', '.join(sorted(PROVIDERS))}", style=_st(pal, "err", bold=False)))
+                elif self.config:
+                    self._open_provider_picker()
                 else:
                     conv.write(Text(f"  Current: {self.config.provider if self.config else '?'}", style="dim"))
 
@@ -1031,6 +1080,66 @@ if HAS_TEXTUAL:
         def action_app_exit(self) -> None:
             self.exit()
 
+        def _provider_models(self) -> list[str]:
+            try:
+                from zer0code.providers import PROVIDERS
+                cls = PROVIDERS.get((self.config.provider if self.config else "openai"), None)
+                if cls is None:
+                    return []
+                return list(cls().available_models)
+            except Exception:
+                return []
+
+        def _open_model_picker(self) -> None:
+            models = self._provider_models()
+            if not models:
+                return
+            self.push_screen(PickerScreen("MODEL", models), self._on_model_picked)
+
+        def _on_model_picked(self, result) -> None:
+            if result and self.config:
+                self.config.model = result
+                try:
+                    self.config.save()
+                except Exception:
+                    pass
+                try:
+                    self._update_header()
+                    self._update_status()
+                except Exception:
+                    pass
+                try:
+                    conv = self.query_one("#conversation", RichLog)
+                    conv.write(Text(f"  Model → {result}", style=_st(self._tui_pal, "primary")))
+                except Exception:
+                    pass
+
+        def _open_provider_picker(self) -> None:
+            try:
+                from zer0code.providers import PROVIDERS
+                options = sorted(PROVIDERS)
+            except Exception:
+                return
+            self.push_screen(PickerScreen("PROVIDER", options), self._on_provider_picked)
+
+        def _on_provider_picked(self, result) -> None:
+            if result and self.config:
+                self.config.provider = result
+                try:
+                    self.config.save()
+                except Exception:
+                    pass
+                try:
+                    self._update_header()
+                    self._update_status()
+                except Exception:
+                    pass
+                try:
+                    conv = self.query_one("#conversation", RichLog)
+                    conv.write(Text(f"  Provider → {result}", style=_st(self._tui_pal, "primary")))
+                except Exception:
+                    pass
+
         def _apply_theme(self, name: str) -> None:
             """Switch named neon theme live (chrome CSS + content palette)."""
             self._tui_pal = tui_palette(name)
@@ -1055,6 +1164,9 @@ if HAS_TEXTUAL:
             cur = getattr(self.config, "theme", "hacker") if self.config else "hacker"
             nxt = order[(order.index(cur) + 1) % len(order)] if cur in order else "cyberpunk"
             self._apply_theme(nxt)
+
+        def action_pick_model(self) -> None:
+            self._open_model_picker()
 
         def action_search_conv(self) -> None:
             self._search_mode = True
