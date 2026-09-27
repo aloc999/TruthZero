@@ -9,6 +9,7 @@ from zer0code.swarm.blackboard import Blackboard, Finding, FINDING_HALF_LIVES
 from zer0code.swarm.agents import SWARM_AGENTS, SwarmAgentSpec
 from zer0code.swarm.scheduler import SwarmScheduler, SwarmResult
 from zer0code.swarm.toolchain import TOOLCHAIN, ToolchainManager
+from zer0code.swarm.pgboard import PostgresBoard, SCHEMA_SQL, dsn_from_env
 
 __all__ = [
     "Blackboard",
@@ -20,4 +21,7 @@ __all__ = [
     "SwarmResult",
     "TOOLCHAIN",
     "ToolchainManager",
+    "PostgresBoard",
+    "SCHEMA_SQL",
+    "dsn_from_env",
 ]

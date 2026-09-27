@@ -22,12 +22,21 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Dashboard | **alpha** | `web/index.html` stub, wiring in progress |
 | MCP serve | **beta** | `zer0code mcp serve` (stdio bridge Wave 2) |
 
-## Wave 2
-- Burp MCP bridge (full replay/scope sync)
-- sqlmap / Metasploit / ZAP adapters
-- Playbook polish (ASM diffing, CI gate)
-- Postgres + pgvector blackboard backend (memory-board now)
-- VS Code extension, GitHub Action + SARIF in Marketplace
+## Wave 2 (shipped in v0.10.0)
+| Feature | Status | Notes |
+|---|---|---|
+| Burp MCP bridge | **beta** | `burp_bridge` tool (history/repeater/scope via REST :1337) |
+| MCP stdio server | **beta** | `zer0code mcp serve` — 9 tools, Claude/Cursor-ready |
+| sqlmap adapter | **beta** | safe defaults, destructive flags blocked |
+| Metasploit adapter | **beta** | scanner/gather/check allowlist, no payloads |
+| ZAP adapter | **beta** | baseline + api-scan via zap-cli/Docker |
+| ASM diffing | **beta** | `zer0code asm diff`, new assets → blackboard |
+| CI gate | **stable** | `zer0code gate --sarif`, exit 2 on fail_on |
+| Postgres board backend | **beta** | `PostgresBoard`, decay in SQL, fails open |
+| VS Code extension | **beta** | `deploy/vscode/` |
+| GitHub Action + SARIF | **beta** | `deploy/github-action/` |
+
+## Wave 3
 
 ## Wave 3
 - Fine-tuned offensive model recipe (Pentest-R1 style)

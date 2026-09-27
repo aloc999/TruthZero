@@ -1,0 +1,43 @@
+name: 'ZER0CODE Swarm Scan'
+description: 'Run ZER0CODE swarm scan and upload SARIF (beta)'
+branding:
+  icon: 'shield'
+  color: 'green'
+inputs:
+  target:
+    description: 'Authorized target (must be in scope)'
+    required: true
+  scope:
+    description: 'Scope (defaults to target)'
+    required: false
+    default: ''
+  playbook:
+    description: 'Playbook (bug-bounty|ci-cd|external-asm|internal-network|ctf-solver)'
+    required: false
+    default: 'ci-cd'
+  fail-on:
+    description: 'Severities that fail CI'
+    required: false
+    default: 'high,critical'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install ZER0CODE
+      shell: bash
+      run: pip install zer0code
+    - name: Swarm scan
+      shell: bash
+      run: |
+        zer0code scan "${{ inputs.target }}" \
+          --scope "${{ inputs.scope || inputs.target }}" --swarm
+    - name: CI gate (SARIF)
+      shell: bash
+      run: zer0code gate --sarif zer0code-results.sarif --fail-on "${{ inputs.fail-on }}"
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: zer0code-results.sarif

@@ -1952,8 +1952,8 @@ def mcp_cmd(action: str) -> None:
     """MCP server: `zer0code mcp serve` (JSON-RPC stdio for Claude/Cursor)."""
     console = Console()
     if action == "serve":
-        console.print(Text("  MCP serve: JSON-RPC stdio — wire swarm tools (recon/exploit/report) here.", style="dim"))
-        console.print(Text("  Beta: stdio bridge ships in Wave 2 (Burp MCP next).", style="dim"))
+        from zer0code.mcp.server import serve
+        serve()
     else:
         console.print(Text("  Usage: zer0code mcp serve", style="red"))
 
@@ -1965,6 +1965,52 @@ def serve_cmd(port: int) -> None:
     console = Console()
     console.print(Text(f"  Dashboard (alpha): web/ stub → http://localhost:{port}", style="dim"))
     console.print(Text("  API: POST /api/scan {target, scope} → swarm run; GET /api/findings", style="dim"))
+
+
+@cli.command(name="gate")
+@click.option("--sarif", "sarif_path", default="", help="SARIF file to evaluate")
+@click.option("--fail-on", default="high,critical", help="Comma-separated severities that fail CI")
+def gate_cmd(sarif_path: str, fail_on: str) -> None:
+    """CI quality gate: exit 2 when SARIF hits fail_on severities."""
+    import json as _json
+    from zer0code.asm import CIGate
+    console = Console()
+    fail = tuple(s.strip().lower() for s in fail_on.split(",") if s.strip())
+    gate = CIGate(fail_on=fail or ("high", "critical"))
+    if not sarif_path:
+        console.print(Text("  Usage: zer0code gate --sarif results.sarif [--fail-on high,critical]", style="red"))
+        raise SystemExit(2)
+    try:
+        sarif = _json.loads(open(sarif_path).read())
+    except Exception as e:
+        console.print(Text(f"  Cannot read SARIF: {e}", style="red"))
+        raise SystemExit(2)
+    res = gate.evaluate_sarif(sarif)
+    if res["passed"]:
+        console.print(Text(f"  Gate PASSED — {res['total']} result(s), none at {res['fail_on']}", style="green"))
+    else:
+        console.print(Text(f"  Gate FAILED — {res['blocking']}/{res['total']} blocking at {res['fail_on']}", style="bold red"))
+        for t in res["top"]:
+            console.print(Text(f"    - {t}", style="dim"))
+    raise SystemExit(res["exit_code"])
+
+
+@cli.command(name="asm")
+@click.argument("action", required=False, default="diff")
+@click.argument("old", required=False, default="")
+@click.argument("new", required=False, default="")
+def asm_cmd(action: str, old: str, new: str) -> None:
+    """ASM snapshot diff: `zer0code asm diff old.json new.json`."""
+    from zer0code.asm import ASMSnapshot
+    console = Console()
+    if action != "diff" or not old or not new:
+        console.print(Text("  Usage: zer0code asm diff <old.json> <new.json>", style="red"))
+        return
+    try:
+        d = ASMSnapshot.load(new).diff(ASMSnapshot.load(old))
+        console.print(Text(ASMSnapshot().format_diff(d), style="cyan"))
+    except Exception as e:
+        console.print(Text(f"  ASM diff failed: {e}", style="red"))
 
 
 def main() -> None:

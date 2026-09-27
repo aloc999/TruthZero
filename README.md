@@ -48,7 +48,19 @@ zer0code scan target.com --scope target.com --swarm          # scriptable swarm
 zer0code scan --lab --lab-target crapi --swarm               # bundled vuln lab
 zer0code playbook run bug-bounty --target target.com
 zer0code demo                                                # offline campaign demo
+zer0code gate --sarif zer0code-results.sarif                 # CI quality gate
+zer0code asm diff old.json new.json                          # ASM delta
+zer0code mcp serve                                           # MCP stdio server
 ```
+
+## What's New in v0.10.0 — Wave 2 🌊
+
+- **Burp bridge** (`burp_bridge` tool) — proxy history, Repeater send, scope sync via Burp REST API (:1337), fails clean when Burp is down
+- **Real MCP server** — `zer0code mcp serve` speaks JSON-RPC stdio (9 tools: blackboard, playbooks, chains, CVSS, burp) for Claude Desktop / Cursor
+- **sqlmap / Metasploit / ZAP adapters** — safe defaults only (sqlmap level2/risk1, msf scanner-allowlist, ZAP baseline); destructive flags refused
+- **ASM diffing + CI gate** — snapshot, diff vs previous, `gate` exits 2 on high/critical; GitHub Action uploads SARIF
+- **Postgres board** (beta) — transactional writes + pheromone decay in SQL, fails open to memory board
+- **VS Code extension** (beta) + **GitHub Action** in `deploy/`
 
 See [ROADMAP.md](ROADMAP.md) for Wave 2/3 and [SECURITY.md](SECURITY.md) for scope safety.
 

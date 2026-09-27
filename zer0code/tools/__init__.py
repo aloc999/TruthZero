@@ -10,6 +10,7 @@ from zer0code.tools.clipboard import ClipboardReadTool, ClipboardWriteTool
 from zer0code.tools.search_replace import SearchReplaceTool
 from zer0code.tools.github import GitHubPRTool, GitHubIssueTool
 from zer0code.tools.burp import BurpImportTool, BurpExportTool
+from zer0code.tools.burp_bridge import BurpBridgeTool
 from zer0code.tools.js_analysis import JSAnalysisTool
 from zer0code.tools.crawler import CrawlerTool
 from zer0code.tools.screenshot import ScreenshotTool
@@ -19,6 +20,9 @@ from zer0code.tools.oob_server import OOBServerTool
 from zer0code.tools.response_diff import ResponseDiffTool
 from zer0code.tools.timing_attack import TimingAttackTool
 from zer0code.tools.exploit_chain import ExploitChainTool
+from zer0code.tools.sqlmap_tool import SqlmapTool
+from zer0code.tools.metasploit_tool import MetasploitTool
+from zer0code.tools.zap_tool import ZapTool
 
 ALL_TOOLS = [
     BashTool,
@@ -43,6 +47,7 @@ ALL_TOOLS = [
     GitHubIssueTool,
     BurpImportTool,
     BurpExportTool,
+    BurpBridgeTool,
     JSAnalysisTool,
     CrawlerTool,
     ScreenshotTool,
@@ -52,4 +57,7 @@ ALL_TOOLS = [
     ResponseDiffTool,
     TimingAttackTool,
     ExploitChainTool,
+    SqlmapTool,
+    MetasploitTool,
+    ZapTool,
 ]

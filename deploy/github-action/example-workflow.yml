@@ -1,0 +1,18 @@
+name: zer0code-swarm
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Authorized target'
+        required: true
+jobs:
+  swarm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./deploy/github-action
+        with:
+          target: ${{ inputs.target || vars.SWARM_TARGET }}
+          playbook: ci-cd
