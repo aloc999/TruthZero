@@ -1,9 +1,12 @@
 {
-  "name": "zer0code",
+  "name": "@aloc999/zer0code",
   "version": "0.15.0",
   "description": "ZER0CODE — Autonomous AI Coding Agent for Expert Penetration Testers",
   "author": "aloc999",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/aloc999/ZER0CODE.git"
