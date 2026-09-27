@@ -19,7 +19,7 @@
 
 Night City has a new predator. **ZER0CODE** is a terminal-native AI swarm that doesn't just scan your attack surface — it *exploits* it, chains the wreckage, and hands you evidence-backed reports. One agent is a tool. **A swarm is a platform.**
 
-Inspired by [Pentest-Swarm-AI](https://github.com/Armur-Ai/Pentest-Swarm-AI), rebuilt in Python, MIT-licensed, running on **your** box with **your** model — from Claude to a fully air-gapped Ollama rig.
+While the corps rent you a single caged agent on their cloud, we shipped the whole swarm to your box. Python-forged, MIT-licensed, running on **your** hardware with **your** model — from Claude to a fully air-gapped Ollama rig in the Sprawl.
 
 Three street laws power the swarm (not a pipeline):
 
