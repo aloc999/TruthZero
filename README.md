@@ -9,7 +9,6 @@
 [![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
 [![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
-[![npm](https://img.shields.io/npm/v/@aloc999/zer0code.svg)](https://www.npmjs.com/package/@aloc999/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
@@ -32,8 +31,8 @@ Three street laws power the swarm (not a pipeline):
 ```
 
 ```bash
-npm install -g @aloc999/zer0code        # sets up Python venv + deps
-# or
+pipx install zer0code                   # dari PyPI (setelah rilis)
+# atau langsung dari GitHub:
 pipx install git+https://github.com/aloc999/ZER0CODE.git
 export ANTHROPIC_API_KEY="sk-ant-..."     # or Together/Gemini/Ollama…
 
@@ -201,7 +200,7 @@ Full policy: [SECURITY.md](SECURITY.md).
 **Install**
 
 ```bash
-npm install -g @aloc999/zer0code
+pipx install zer0code
 # or from source:
 git clone https://github.com/aloc999/ZER0CODE.git && cd ZER0CODE && pipx install -e .
 ```
