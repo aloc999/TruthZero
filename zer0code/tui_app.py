@@ -6,15 +6,18 @@ from typing import Optional
 
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 from rich.syntax import Syntax
+from rich.console import Group
+from rich import box
 
 HAS_TEXTUAL = False
 try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
-    from textual.widgets import Footer, Input, RichLog, Static, OptionList
+    from textual.widgets import Footer, Input, RichLog, Static, OptionList, Button
     from textual.widgets.option_list import Option
     from textual.screen import ModalScreen
     from textual.reactive import reactive
@@ -23,14 +26,6 @@ try:
     HAS_TEXTUAL = True
 except ImportError:
     pass
-
-BANNER_LINES = [
-    "  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
-    "",
-    "   ZER0CODE  //  HACK THE PLANET AT MACHINE SPEED",
-    "",
-    "  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
-]
 
 SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -76,6 +71,39 @@ def build_tui_css(template: str, pal: dict) -> str:
 
 def _st(pal: dict, role: str, bold: True | bool = True, pre: str = "") -> str:
     return f"{pre}{'bold ' if bold else ''}{pal[role]}"
+
+
+_SPARK = "▁▂▃▄▅▆▇█"
+
+
+def sparkline(values: list[float], width: int = 24) -> str:
+    vals = [float(v) for v in list(values)[-width:]] or [0.0]
+    mx = max(vals) or 1.0
+    return "".join(_SPARK[min(int(v / mx * 7), 7)] for v in vals)
+
+
+def meter(frac: float, width: int = 20) -> str:
+    f = max(0.0, min(1.0, float(frac)))
+    n = int(round(f * width))
+    return "█" * n + "░" * (width - n)
+
+
+def risk_of_severity(counts: dict) -> tuple[int, str]:
+    c = counts.get("critical", 0)
+    h = counts.get("high", 0)
+    med = counts.get("medium", 0)
+    low = counts.get("low", 0)
+    if c > 0:
+        base, band = 85, "CRITICAL"
+    elif h > 0:
+        base, band = 65, "HIGH"
+    elif med > 0:
+        base, band = 42, "MEDIUM"
+    elif low > 0:
+        base, band = 18, "LOW"
+    else:
+        return 0, "NONE"
+    return min(100, base + min(15, (c + h + med + low) * 3)), band
 
 if HAS_TEXTUAL:
 
@@ -267,6 +295,26 @@ if HAS_TEXTUAL:
             align-horizontal: center;
         }
 
+        #welcome {
+            height: auto;
+            padding: 1 2 0 2;
+        }
+
+        #welcome-panel {
+            height: auto;
+        }
+
+        #welcome-actions {
+            height: auto;
+            padding: 1 0;
+            align: center middle;
+        }
+
+        #welcome-actions Button {
+            margin: 0 1;
+            border: solid $primary;
+        }
+
         #status-bar {
             dock: bottom;
             height: 1;
@@ -291,6 +339,7 @@ if HAS_TEXTUAL:
             Binding("ctrl+f", "search_conv", "Search", show=True),
             Binding("ctrl+s", "toggle_scroll", "Scroll", show=False),
             Binding("ctrl+y", "copy_last", "Copy", show=True),
+            Binding("ctrl+r", "rerun_scan", "Re-run", show=True),
             Binding("escape", "escape_context", "Esc", show=False),
         ]
 
@@ -306,7 +355,10 @@ if HAS_TEXTUAL:
                 theme_name = config.get("theme", "hacker")
             else:
                 theme_name = getattr(config, "theme", "hacker") or "hacker"
+            self._theme_name = theme_name
             self._tui_pal = tui_palette(theme_name)
+            self._last_board_file = ""
+            self._last_scan_cmd = ""
             self._processing = False
             self._input_history: list[str] = []
             self._history_idx = -1
@@ -328,6 +380,14 @@ if HAS_TEXTUAL:
             yield Static(header_text, id="header-bar")
             yield ContextBreadcrumb(id="breadcrumb")
 
+            with Vertical(id="welcome"):
+                yield Static(self._welcome_panel(), id="welcome-panel")
+                with Horizontal(id="welcome-actions"):
+                    yield Button("⚡ Scan", id="btn-scan", variant="primary")
+                    yield Button("🧪 Lab", id="btn-lab")
+                    yield Button("📊 Bench", id="btn-bench")
+                    yield Button("◢ Theme", id="btn-theme")
+
             with Horizontal(id="main-area"):
                 yield RichLog(id="conversation", wrap=True, highlight=True, markup=True, max_lines=50000, auto_scroll=True)
                 yield RichLog(id="side-panel", wrap=True, highlight=True, markup=True, max_lines=10000)
@@ -344,36 +404,86 @@ if HAS_TEXTUAL:
             yield ZeroStatusBar(id="status-bar")
             yield Footer()
 
+        def _welcome_panel(self):
+            pal = self._tui_pal
+            grid = Table(box=None, show_header=False, padding=(0, 3))
+            grid.add_column(style="dim")
+            grid.add_column(style=_st(pal, "accent"))
+            if self.config:
+                grid.add_row("Provider", str(getattr(self.config, "provider", "?")))
+                grid.add_row("Model", str(getattr(self.config, "model", "?")))
+                grid.add_row("Theme", f"{self._theme_name}   (Ctrl+T)")
+            if self.agent:
+                grid.add_row("Session", (self.agent.session_id or "—")[:12])
+                grid.add_row("Arsenal", f"{len(self.agent.tool_registry)} tools · 15 skills")
+                budget = getattr(self.agent, "token_budget", 0) or 0
+                grid.add_row("Budget", f"${budget:.2f}" if budget else "uncapped")
+            hero = Text("⚡ HACK THE PLANET AT MACHINE SPEED ⚡", style=_st(pal, "accent"))
+            return Panel(Group(hero, Text(""), grid),
+                         title="ZER0CODE // NEON GRID", title_align="left",
+                         border_style=pal["primary"], padding=(1, 2))
+
+        def on_button_pressed(self, event: Button.Pressed) -> None:
+            bid = event.button.id or ""
+            try:
+                inp = self.query_one("#user-input", Input)
+            except Exception:
+                return
+            if bid == "btn-scan":
+                inp.value = "/scan "
+            elif bid == "btn-lab":
+                inp.value = "/lab "
+            elif bid == "btn-bench":
+                inp.value = "/bench"
+            elif bid == "btn-theme":
+                self._apply_theme("cyberpunk" if self._theme_name != "cyberpunk" else "hacker")
+                try:
+                    self.query_one("#welcome-panel", Static).update(self._welcome_panel())
+                except Exception:
+                    pass
+                return
+            else:
+                return
+            inp.focus()
+
         def on_mount(self) -> None:
             pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
 
-            for line in BANNER_LINES:
-                conv.write(Text(line, style=_st(pal, "primary")))
-            conv.write(Text(""))
-            conv.write(Text("              ⚡ AUTONOMOUS PENTESTING AGENT ⚡", style=_st(pal, "accent")))
-            conv.write(Text(""))
-
-            info = Text()
-            if self.config:
-                info.append(f"  Provider: ", style="dim")
-                info.append(f"{self.config.provider}", style=_st(pal, "accent"))
-                info.append(f"  │  Model: ", style="dim")
-                info.append(f"{self.config.model}", style=_st(pal, "accent"))
-            if self.agent and self.agent.session_id:
-                info.append(f"  │  Session: ", style="dim")
-                info.append(f"{self.agent.session_id}", style=_st(pal, "accent"))
-            conv.write(info)
-
-            tools_count = len(self.agent.tool_registry) if self.agent else 0
-            conv.write(Text(f"  {tools_count} tools  │  /help for commands  │  Ctrl+B panel  │  Shift+drag to copy", style="dim"))
-            conv.write(Text(f"  /scan <target> hunt  │  /lab up crapi  │  /bench score  │  /theme cycle look", style="dim"))
-            conv.write(Text(""))
-            conv.write(Text("  ─" * 35, style="dim"))
-            conv.write(Text(""))
+            try:
+                self._render_side_home()
+            except Exception:
+                pass
 
             self._update_status()
             self.query_one("#user-input", Input).focus()
+
+        def _render_side_home(self) -> None:
+            """Side panel default: live GRID card so it never looks dead."""
+            from textual.widgets import RichLog as _RL
+            pal = self._tui_pal
+            side = self.query_one("#side-panel", _RL)
+            side.clear()
+            side.write(Text("  ◢ GRID", style=_st(pal, "accent")))
+            if self.agent:
+                s = self.agent.cost_tracker.summary()
+                hist = [h.get("cost", 0) for h in getattr(self.agent.cost_tracker, "_history", [])]
+                side.write(Text(f"  spend ${s['total_cost']:.4f} · {s['requests']} req", style="dim"))
+                side.write(Text(f"  cost {sparkline(hist) or '—'}", style="dim"))
+                side.write(Text(f"  ctx {self.agent.context_window_percent}% · {self.agent.message_count} msgs", style="dim"))
+            if getattr(self, "_last_board_file", ""):
+                try:
+                    from zer0code.swarm import Blackboard
+                    board = Blackboard(self._last_board_file)
+                    summ = board.summary()
+                    score, band = risk_of_severity(summ.get("by_severity", {}))
+                    side.write(Text(f"  risk {score} {band} {meter(score / 100, 12)}", style=_st(pal, "warn", bold=False)))
+                    side.write(Text(f"  findings {summ.get('total', 0)} ({summ.get('hot', 0)} hot)", style="dim"))
+                except Exception:
+                    pass
+            else:
+                side.write(Text("  no campaign yet — /scan <target>", style="dim"))
+            side.write(Text("  Ctrl+B close · Esc refocus", style="dim"))
 
         def _start_spinner(self, action: str = "Thinking") -> None:
             spinner = self.query_one("#spinner-bar", SpinnerWidget)
@@ -420,6 +530,10 @@ if HAS_TEXTUAL:
             user_input = event.value.strip()
             if not user_input:
                 return
+            try:
+                self.query_one("#welcome").display = False
+            except Exception:
+                pass
 
             inp = self.query_one("#user-input", Input)
             inp.value = ""
@@ -1034,9 +1148,15 @@ if HAS_TEXTUAL:
                             result, board_file = await run_headless_scan(
                                 target, scope=scope, rounds=rounds, mode=mode, jev=jev,
                                 on_event=_progress)
+                            self._last_board_file = board_file
+                            self._last_scan_cmd = f"/scan {args}"
                             conv.write(Text(f"  Done: {result.rounds} rounds, {result.findings_total} findings, "
                                             f"{result.confirmed} confirmed ({result.stopped_reason})", style=_st(pal, "primary")))
-                            conv.write(Text(f"  Board: {board_file}", style="dim"))
+                            conv.write(Text(f"  Board: {board_file}  ·  Ctrl+R re-run", style="dim"))
+                            try:
+                                self._render_side_home()
+                            except Exception:
+                                pass
                         except PermissionError as e:
                             conv.write(Text(f"  {e}", style=_st(pal, "err", bold=False)))
                         except Exception as e:
@@ -1125,6 +1245,17 @@ if HAS_TEXTUAL:
             except Exception:
                 pass
 
+        def action_rerun_scan(self) -> None:
+            """Ctrl+R: re-run the last /scan with identical args."""
+            cmd = getattr(self, "_last_scan_cmd", "")
+            if not cmd:
+                return
+            try:
+                conv = self.query_one("#conversation", RichLog)
+            except Exception:
+                return
+            self.run_worker(self._handle_slash(cmd, conv))
+
         def action_clear_conv(self) -> None:
             conv = self.query_one("#conversation", RichLog)
             conv.clear()
@@ -1196,6 +1327,7 @@ if HAS_TEXTUAL:
 
         def _apply_theme(self, name: str) -> None:
             """Switch named neon theme live (chrome CSS + content palette)."""
+            self._theme_name = name
             self._tui_pal = tui_palette(name)
             ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, self._tui_pal)
             try:

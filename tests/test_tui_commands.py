@@ -192,3 +192,59 @@ async def test_escape_closes_panel_and_refocuses():
         await pilot.press("escape")  # ESC closes panel
         await pilot.pause(0.3)
         assert app.show_panel is False
+
+
+@pytest.mark.asyncio
+async def test_rerun_and_telemetry(tmp_path, monkeypatch):
+    import zer0code.headless as h
+    monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
+    from zer0code.tui_app import build_tui_css, tui_palette
+    from types import SimpleNamespace
+    from textual.widgets import RichLog
+
+    cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
+                          memory_enabled=False)
+    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+                                    tui_palette("hacker"))
+    app = ZeroCodeTUI(agent=None, config=cfg)
+    async with app.run_test(size=(110, 34)) as pilot:
+        for ch in "/scan example.com --scope example.com --rounds 1":
+            await pilot.press(ch)
+        await pilot.press("enter")
+        await pilot.pause(1.5)
+        assert app._last_scan_cmd.startswith("/scan")
+        assert app._last_board_file != ""
+        side = app.query_one("#side-panel", RichLog)
+        assert app.show_panel is True
+        # ctrl+r re-runs identical scan
+        await pilot.press("ctrl+r")
+        await pilot.pause(1.5)
+        conv = app.query_one("#conversation", RichLog)
+        assert conv._line_cache, "expected conversation content"
+
+
+@pytest.mark.asyncio
+async def test_welcome_buttons_and_hide():
+    from zer0code.tui_app import build_tui_css, tui_palette
+    from types import SimpleNamespace
+    from textual.widgets import Input
+
+    cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
+                          memory_enabled=False)
+    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+                                    tui_palette("hacker"))
+    app = ZeroCodeTUI(agent=None, config=cfg)
+    async with app.run_test(size=(110, 32)) as pilot:
+        await pilot.pause(0.5)
+        welcome = app.query_one("#welcome")
+        assert welcome.display is not False
+        assert len(app.query("#welcome-actions Button")) == 4
+        await pilot.click("#btn-lab")
+        await pilot.pause(0.4)
+        assert app.query_one("#user-input", Input).value == "/lab "
+        await pilot.click("#btn-bench")
+        await pilot.pause(0.4)
+        assert "bench" in app.query_one("#user-input", Input).value
+        await pilot.press("enter")  # submit hides welcome
+        await pilot.pause(0.6)
+        assert welcome.display is False
