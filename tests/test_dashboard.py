@@ -42,6 +42,35 @@ def test_headless_scope_block():
         asyncio.run(run_headless_scan("evil.com", scope="example.com", rounds=1))
 
 
+def test_headless_sequential_and_jev():
+    result, _ = asyncio.run(
+        run_headless_scan("example.com", scope="example.com",
+                          mode="sequential", persist=False))
+    assert result.stopped_reason == "sequential"
+    assert result.rounds == 1
+    assert result.findings_total >= 3
+    # jev sweep keeps evidenced demo findings (fail open by design)
+    result2, _ = asyncio.run(
+        run_headless_scan("example.com", scope="example.com", rounds=1,
+                          jev=True, persist=False))
+    assert result2.findings_total >= 3
+    assert "+jev(" in result2.stopped_reason
+
+
+def test_scan_strict_exit_code():
+    from click.testing import CliRunner
+    from zer0code.cli import cli
+    r = CliRunner().invoke(
+        cli, ["scan", "evil.com", "--scope", "example.com", "--strict"])
+    assert r.exit_code == 1
+    r = CliRunner().invoke(cli, ["scan", "evil.com", "--scope", "example.com"])
+    assert r.exit_code == 0
+    r = CliRunner().invoke(
+        cli, ["scan", "example.com", "--scope", "example.com",
+              "--no-swarm", "--rounds", "1"])
+    assert r.exit_code == 0 and "[sequential]" in r.output
+
+
 def test_dashboard_api():
     srv = DashboardServer(0)
     url = srv.start_background()

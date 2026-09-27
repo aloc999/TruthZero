@@ -100,6 +100,14 @@ class Blackboard:
         self._autosave()
         return True
 
+    def remove(self, finding_id: str) -> bool:
+        """Delete a finding (e.g. JEV-agreed false positive)."""
+        if finding_id in self._findings:
+            del self._findings[finding_id]
+            self._autosave()
+            return True
+        return False
+
     # -- reads ----------------------------------------------------------
     def hot(self, threshold: float = CLASSIFY_THRESHOLD,
             ftypes: list[str] | None = None) -> list[Finding]:

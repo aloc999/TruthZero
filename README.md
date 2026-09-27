@@ -7,7 +7,7 @@
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
 [![version](https://img.shields.io/badge/version-v0.14.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
-[![tests](https://img.shields.io/badge/tests-54_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
+[![tests](https://img.shields.io/badge/tests-56_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
@@ -210,6 +210,7 @@ zer0code                                 # interactive session
 zer0code -p together -m zai-org/GLM-5.3  # ride a cyber-bench leader
 zer0code run "map the API surface of shop.t"
 zer0code scan shop.t --scope shop.t --swarm --jev-adaptive
+# flags: --no-swarm (sequential pass), --jev (FP sweep), --strict (exit 1 on failure)
 zer0code sessions / memory / doctor / install-tools
 ```
 

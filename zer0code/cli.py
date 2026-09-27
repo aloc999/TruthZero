@@ -1834,16 +1834,22 @@ def scan_cmd(ctx: click.Context, target: str, scope: str, swarm: bool,
         return
     GLOBAL_CLEANUP.register("swarm-board-save", lambda: None)
     use_adaptive = bool(jev_adaptive or config.jev_adaptive)
+    use_jev = bool(jev or config.jev_enabled)
+    use_strict = bool(strict or config.strict_llm)
+    mode = "swarm" if swarm else "sequential"
     scorer = AdaptiveScorer() if use_adaptive else None
     try:
         result, board_file = asyncio.run(run_headless_scan(
             target, scope=scope or target, rounds=rounds,
-            budget_s=float(budget or 0), adaptive=use_adaptive))
+            budget_s=float(budget or 0), adaptive=use_adaptive,
+            mode=mode, jev=use_jev, jev_backend=config.jev_backend))
     except PermissionError as e:
         console.print(Text(f"  {e}", style="bold red"))
+        if use_strict:
+            raise SystemExit(1)
         return
     board = Blackboard(board_file or None)
-    console.print(Text(f"\n  Swarm done: {result.rounds} rounds, "
+    console.print(Text(f"\n  Swarm done [{mode}]: {result.rounds} rounds, "
                        f"{result.findings_total} findings, {result.confirmed} confirmed "
                        f"({result.stopped_reason})", style="bold green"))
     console.print(Text(f"  Board: {board_file}", style="dim"))

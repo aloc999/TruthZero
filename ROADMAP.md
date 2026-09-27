@@ -57,6 +57,7 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | AND-gate: drop only if builtin + external agree | **stable** | conflict/abstain → keep for human review |
 | Severity gate (external only at high+) | **stable** | `jev_min_severity`, paid calls go where FPs cost most |
 | Doctor Jev status line | **stable** | builtin-only vs external-ready |
+| Wired flags: --no-swarm sequential, --jev sweep, --strict exit codes | **stable** | `headless.py` modes, `strict_llm` honored |
 
 ## v0.13 — Live Grid (shipped)
 | Feature | Status | Notes |
