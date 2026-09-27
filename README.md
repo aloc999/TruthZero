@@ -9,7 +9,6 @@
 [![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
 [![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
-[![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
@@ -32,7 +31,7 @@ Three street laws power the swarm (not a pipeline):
 ```
 
 ```bash
-pip install zer0code                      # or: npm install -g zer0code
+pipx install git+https://github.com/aloc999/ZER0CODE.git
 export ANTHROPIC_API_KEY="sk-ant-..."     # or Together/Gemini/Ollama…
 
 zer0code lab up crapi                     # spin up a legal vuln target (:8888)
@@ -199,9 +198,9 @@ Full policy: [SECURITY.md](SECURITY.md).
 **Install**
 
 ```bash
-npm install -g zer0code            # recommended: sets up Python venv + deps
-# or
-git clone https://github.com/aloc999/ZER0CODE.git && cd ZER0CODE && pip install -e .
+pipx install git+https://github.com/aloc999/ZER0CODE.git
+# or from source:
+git clone https://github.com/aloc999/ZER0CODE.git && cd ZER0CODE && pipx install -e .
 ```
 
 Requirements: Python 3.10+. Full chrome optionally: `apt install subfinder nmap nuclei ffuf sqlmap metasploit-framework`, `docker` for labs, Burp + REST API extension for the bridge, Postgres 16 + pgvector for the memory board.
