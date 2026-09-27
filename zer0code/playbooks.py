@@ -59,6 +59,11 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def load_yaml_file(path: str) -> dict:
+    """Parse any YAML file (PyYAML if present, else tiny subset parser)."""
+    return _parse_simple_yaml(Path(path).read_text())
+
+
 def list_playbooks() -> list[str]:
     d = _repo_root() / "playbooks"
     if not d.exists():

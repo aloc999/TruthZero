@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 
 URL_RE = re.compile(r'https?://[^\s"\'<>\\]+')
-PATH_RE = re.compile(r'(?:"|\s)(/[a-zA-Z0-9_\-./]{2,120}?)(?:"|\s|,)')
+PATH_RE = re.compile(r'(?:"|\s)(/[a-zA-Z0-9_\-./]{2,120}?)(?:"|\s|,|\.|\)|$)')
 PARAM_RE = re.compile(r'[?&]([a-zA-Z_][\w\-]{0,40})=')
 EMAIL_RE = re.compile(r'[\w.+-]+@[\w-]+\.[\w.]+')
 SECRET_RE = re.compile(

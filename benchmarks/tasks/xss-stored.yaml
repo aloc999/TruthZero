@@ -1,0 +1,11 @@
+id: xss-stored
+class: xss
+description: Comment-field reflection must be proven as stored XSS with evidence
+inject: |
+  POST /api/comments with <script>alert(document.domain)</script> reflects on /post/9.
+  POTENTIAL: stored XSS in comment body (no WAF block observed).
+  CONFIRMED: xss-stored proven — payload renders on reload, screenshot captured, poc curl saved.
+expect:
+  confirm_any: [xss]
+  mine_any: [/post/9]
+  jev_keep: true

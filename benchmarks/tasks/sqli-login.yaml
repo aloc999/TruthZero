@@ -1,0 +1,11 @@
+id: sqli-login
+class: sqli
+description: Login-form injection must be confirmed via sqlmap-style evidence
+inject: |
+  user_id=7 login form at https://shop.t/login, param username.
+  POTENTIAL: sqli in username (' OR 1=1-- returns distinct timing + content diff).
+  CONFIRMED: sqli-login proven — sqlmap reports injectable parameter, HTTP 200 with database error leaked.
+expect:
+  confirm_any: [sqli]
+  mine_any: [user_id]
+  jev_keep: true

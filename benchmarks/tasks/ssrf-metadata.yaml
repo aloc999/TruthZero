@@ -1,0 +1,11 @@
+id: ssrf-metadata
+class: ssrf
+description: URL-fetch param must become a proven SSRF with OOB evidence
+inject: |
+  GET /api/fetch?url= target renders server-side, uuid 123e4567-e89b-12d3-a456-426614174000 in job id.
+  POTENTIAL: ssrf in url param (OOB callback received on collaborator).
+  CONFIRMED: ssrf-metadata proven — metadata path read returns HTTP 200, request/response captured.
+expect:
+  confirm_any: [ssrf]
+  mine_any: ["uuid:"]
+  jev_keep: true

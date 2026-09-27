@@ -50,8 +50,19 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
 | Green test suite | **stable** | 43 passed, 0 failed |
 
+## v0.12 — Benchmarks + pgvector + Marketplace (shipped)
+| Feature | Status | Notes |
+|---|---|---|
+| Mini benchmark suite (5 tasks, ingest→mine→JEV) | **stable** | `benchmarks/tasks/`, `bench --suite mini` → 5/5 |
+| RESULTS.md with honest harness-local numbers | **stable** | `benchmarks/RESULTS.md` |
+| pgvector embeddings (hashing default, pluggable model) | **beta** | `PostgresBoard.ensure_vector/similar` |
+| VS Code Marketplace packaging | **beta** | `deploy/vscode/` + vsce docs |
+| GitHub Action Marketplace flow | **beta** | `deploy/github-action/README.md` + `v0` moving tag |
+| Release pipeline (test→PyPI→major tag→asset check) | **stable** | `.github/workflows/release.yml` |
+| Cyberpunk README rewrite | **stable** | chrome banner, full deck docs |
+
 ## Next
-- Cybench / AutoPenBench / CVE-Bench numbers (bench harness is ready)
-- Postgres similarity search via pgvector embeddings
-- Fine-tuned weights (recipe exists, training not run)
-- Marketplace listings (VS Code ext + GitHub Action exist in `deploy/`)
+- Cybench / AutoPenBench / CVE-Bench official envs (harness ready)
+- Real embedding model option (Ollama/Together) behind `embed_fn`
+- `vsce publish` + Marketplace listing live (packaging ready)
+- pgvector HNSW index tuning at scale

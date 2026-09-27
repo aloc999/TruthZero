@@ -83,6 +83,14 @@ def test_bench_offline():
     assert empty["score"] == 0.0
 
 
+def test_bench_mini_suite():
+    from zer0code.bench import run_suite
+    res = run_suite("mini")
+    assert res["total"] == 5
+    assert res["passed"] == res["total"], res["tasks"]
+    assert res["score"] == 1.0
+
+
 def test_lab_registry():
     assert set(LABS) == {"crapi", "juice", "vampi", "dvga"}
     assert LabManager.docker_ok() in (True, False)

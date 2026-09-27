@@ -97,3 +97,31 @@ def test_pgboard_fails_open():
     b = PostgresBoard("postgresql://u:p@127.0.0.1:19999/db")
     assert b.connect() is False
     assert b.error != ""
+
+
+def test_hashing_embed():
+    import math
+    from zer0code.swarm import hashing_embed
+    v1 = hashing_embed("bola idor user_id swap", 64)
+    v2 = hashing_embed("bola idor user_id swap", 64)
+    assert v1 == v2  # deterministic
+    assert len(v1) == 64
+    assert abs(math.sqrt(sum(x * x for x in v1)) - 1.0) < 1e-6  # L2-normed
+    v3 = hashing_embed("completely different ssti template render", 64)
+    assert v3 != v1
+    # similar texts share buckets → cosine near 1
+    va = hashing_embed("sql injection login bypass", 128)
+    vb = hashing_embed("sql injection login form", 128)
+    cos = sum(a * b for a, b in zip(va, vb))
+    assert cos > 0.5
+
+
+def test_pgboard_vector_no_conn():
+    from zer0code.swarm import PostgresBoard
+    b = PostgresBoard("postgresql://u:p@127.0.0.1:19999/db")
+    assert b.similar("xss") == []  # fail open, no crash
+    try:
+        b.ensure_vector()
+        assert False, "should raise when not connected"
+    except ConnectionError:
+        pass

@@ -1,0 +1,11 @@
+id: bola-idor
+class: bola
+description: Leaked user_id across endpoints must become a confirmed BOLA chain
+inject: |
+  Crawl found https://shop.t/api/v1/orders?user_id=1042 and contact buyer@t.local.
+  POTENTIAL: BOLA on /api/v1/orders (user_id swap returns 200 cross-user diff).
+  CONFIRMED: bola-idor chain proven — attacker session reads order 1042 (user B), response diff captured.
+expect:
+  confirm_any: [bola]
+  mine_any: [user_id, buyer@t.local]
+  jev_keep: true

@@ -9,7 +9,7 @@ from zer0code.swarm.blackboard import Blackboard, Finding, FINDING_HALF_LIVES
 from zer0code.swarm.agents import SWARM_AGENTS, SwarmAgentSpec
 from zer0code.swarm.scheduler import SwarmScheduler, SwarmResult
 from zer0code.swarm.toolchain import TOOLCHAIN, ToolchainManager
-from zer0code.swarm.pgboard import PostgresBoard, SCHEMA_SQL, dsn_from_env
+from zer0code.swarm.pgboard import PostgresBoard, SCHEMA_SQL, VECTOR_SQL, dsn_from_env, hashing_embed
 from zer0code.swarm.selfheal import plan_heal, should_retry, HealPlan
 from zer0code.swarm.miner import mine
 from zer0code.swarm.specialists import (
@@ -28,7 +28,9 @@ __all__ = [
     "ToolchainManager",
     "PostgresBoard",
     "SCHEMA_SQL",
+    "VECTOR_SQL",
     "dsn_from_env",
+    "hashing_embed",
     "plan_heal",
     "should_retry",
     "HealPlan",

@@ -1,0 +1,12 @@
+id: jwt-none
+class: jwt
+description: alg=none acceptance must be proven; hedge-only note must be dropped by JEV
+inject: |
+  Authorization: Bearer eyJhbGciOiJub25lIn0 on /api/admin returns 200 without signature.
+  POTENTIAL: jwt-none accepted on admin endpoint.
+  CONFIRMED: jwt-none proven — forged admin token accepted, curl PoC + response captured.
+  NOTE: may possibly be theoretical on /api/legacy (unable to confirm, no evidence).
+expect:
+  confirm_any: [jwt]
+  mine_any: [/api/admin]
+  jev_keep: true

@@ -2020,11 +2020,23 @@ def asm_cmd(action: str, old: str, new: str) -> None:
 
 
 @cli.command(name="bench")
-def bench_cmd() -> None:
+@click.option("--suite", default="single", help="Benchmark suite: single|mini")
+def bench_cmd(suite: str) -> None:
     """Offline benchmark: canned campaign → detection/precision/chain score."""
     import json as _json
-    from zer0code.bench import run_offline
+    from zer0code.bench import run_offline, run_suite
     console = Console()
+    if suite == "mini":
+        res = run_suite("mini")
+        console.print(Text(f"  Mini-suite: {res['passed']}/{res['total']} passed "
+                           f"(score {res['score']}, {res['duration_s']}s)", style="bold green"))
+        for t in res["tasks"]:
+            mark = "✓" if t["passed"] else "✗"
+            console.print(Text(f"    {mark} {t['task']}: confirm={t['confirm']} "
+                               f"mine={t['mine']} jev_keep={t['jev_keep']} "
+                               f"jev_drop_fp={t['jev_drop_fp']}",
+                               style="green" if t["passed"] else "red"))
+        return
     res = asyncio.run(run_offline())
     console.print(Text(f"  Bench score: {res['score']} "
                        f"(detection {res['detection']}, precision {res['precision']}, "

@@ -96,13 +96,16 @@ class SwarmScheduler:
         # response mining: every output becomes leads (Wave 3 runtime reaction)
         try:
             from zer0code.swarm.miner import mine as _mine
+            endpoints_kept = 0
             for lead in _mine(text, source=agent_name, target=target):
                 if (lead["ftype"], lead["title"]) in existing:
                     continue
-                # ENDPOINT leads are noisy — only keep secrets + refs here;
-                # endpoints come from recon proper.
+                # ENDPOINT leads are noisy — keep max 5 per ingest;
+                # endpoints otherwise come from recon proper.
                 if lead["ftype"] == "ENDPOINT" and lead["severity"] != "high":
-                    continue
+                    if endpoints_kept >= 5:
+                        continue
+                    endpoints_kept += 1
                 self.board.add(lead["ftype"], lead["title"],
                                detail=lead.get("detail", ""), agent=agent_name,
                                target=target, severity=lead.get("severity", "info"))
