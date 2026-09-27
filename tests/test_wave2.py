@@ -4,7 +4,6 @@ import subprocess
 import sys
 
 from truthzero.asm import ASMSnapshot, CIGate
-from truthzero.scoring import cvss31_score
 
 
 def test_asm_diff(tmp_path):
@@ -43,8 +42,8 @@ def test_adapters_registered():
 
 def test_adapters_fail_safe():
     """Missing binaries / destructive flags fail with clear errors, no crash."""
-    from truthzero.tools.sqlmap_tool import SqlmapTool
     from truthzero.tools.metasploit_tool import MetasploitTool
+    from truthzero.tools.sqlmap_tool import SqlmapTool
     from truthzero.tools.zap_tool import ZapTool
 
     async def go():
@@ -101,6 +100,7 @@ def test_pgboard_fails_open():
 
 def test_hashing_embed():
     import math
+
     from truthzero.swarm import hashing_embed
     v1 = hashing_embed("bola idor user_id swap", 64)
     v2 = hashing_embed("bola idor user_id swap", 64)

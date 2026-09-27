@@ -1,9 +1,13 @@
 import pytest
 
-textual = pytest.importorskip("textual")
+textual = pytest.importorskip("textual")  # noqa: E402 - gate before heavy imports
 
-from truthzero.tui_app import (
-    TUI_PALETTES, tui_palette, build_tui_css, _st, TruthZeroTUI,
+from truthzero.tui_app import (  # noqa: E402 - after importorskip gate
+    TUI_PALETTES,
+    TruthZeroTUI,
+    _st,
+    build_tui_css,
+    tui_palette,
 )
 
 

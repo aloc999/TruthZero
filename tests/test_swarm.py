@@ -1,8 +1,8 @@
 import asyncio
 
-from truthzero.swarm import Blackboard, SwarmScheduler
-from truthzero.scoring import cvss31_score, JevFilter, AdaptiveScorer
 from truthzero import playbooks as pb
+from truthzero.scoring import AdaptiveScorer, JevFilter, cvss31_score
+from truthzero.swarm import Blackboard, SwarmScheduler
 
 
 def test_blackboard_pheromone_decay():
@@ -97,10 +97,10 @@ def test_playbooks_chains_load():
 
 
 def test_scope_enforcement_in_agent():
+
     from truthzero.agent import TruthCoreAgent
     from truthzero.config import TruthZeroConfig
     from truthzero.scope import ScopeManager
-    import json
     cfg = TruthZeroConfig(provider="ollama", model="x")
     agent = TruthCoreAgent(cfg)
     sm = ScopeManager()

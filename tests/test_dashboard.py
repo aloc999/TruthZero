@@ -76,6 +76,7 @@ def test_headless_on_event():
 
 def test_scan_strict_exit_code():
     from click.testing import CliRunner
+
     from truthzero.cli import cli
     r = CliRunner().invoke(
         cli, ["scan", "evil.com", "--scope", "example.com", "--strict"])

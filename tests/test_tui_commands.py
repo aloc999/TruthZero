@@ -1,9 +1,9 @@
 """Slash-command audit: every suggested command must do something sane, never crash."""
 import pytest
 
-textual = pytest.importorskip("textual")
+textual = pytest.importorskip("textual")  # noqa: E402 - gate before heavy imports
 
-from truthzero.tui_app import TruthZeroTUI, SLASH_COMMANDS
+from truthzero.tui_app import TruthZeroTUI  # noqa: E402 - after importorskip gate
 
 
 class FakeConv:
@@ -110,8 +110,9 @@ async def test_provider_invalid_lists_all():
 @pytest.mark.asyncio
 async def test_mounted_theme_and_provider():
     """Mounted paths: /theme cycles live, /provider valid switches."""
-    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
+
+    from truthzero.tui_app import build_tui_css, tui_palette
 
     class Cfg(SimpleNamespace):
         def save(self):
@@ -135,10 +136,13 @@ async def test_mounted_theme_and_provider():
 
 @pytest.mark.asyncio
 async def test_model_picker_select_and_cancel():
-    from truthzero.tui_app import (
-        build_tui_css, tui_palette, PickerScreen,
-    )
     from types import SimpleNamespace
+
+    from truthzero.tui_app import (
+        PickerScreen,
+        build_tui_css,
+        tui_palette,
+    )
 
     class Cfg(SimpleNamespace):
         def save(self):
@@ -186,8 +190,9 @@ async def test_scan_out_of_scope_clean():
 
 @pytest.mark.asyncio
 async def test_escape_closes_panel_and_refocuses():
-    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
+
+    from truthzero.tui_app import build_tui_css, tui_palette
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)
@@ -211,9 +216,11 @@ async def test_escape_closes_panel_and_refocuses():
 async def test_rerun_and_telemetry(tmp_path, monkeypatch):
     import truthzero.headless as h
     monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
-    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
+
     from textual.widgets import RichLog
+
+    from truthzero.tui_app import build_tui_css, tui_palette
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)
@@ -227,7 +234,6 @@ async def test_rerun_and_telemetry(tmp_path, monkeypatch):
         await pilot.pause(1.5)
         assert app._last_scan_cmd.startswith("/scan")
         assert app._last_board_file != ""
-        side = app.query_one("#side-panel", RichLog)
         assert app.show_panel is True
         # ctrl+r re-runs identical scan
         await pilot.press("ctrl+r")
@@ -238,9 +244,11 @@ async def test_rerun_and_telemetry(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_welcome_buttons_and_hide():
-    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
+
     from textual.widgets import Input
+
+    from truthzero.tui_app import build_tui_css, tui_palette
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)

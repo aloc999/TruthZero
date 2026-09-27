@@ -1,12 +1,18 @@
 import asyncio
 
-from truthzero.swarm import (
-    Blackboard, SwarmScheduler, plan_heal, should_retry, mine,
-    auth_holder_spec, param_fuzzer_spec, chain_builder_spec, maybe_spawn,
-)
-from truthzero.memory.guard import MemoryGuard
 from truthzero.bench import run_offline, score_campaign
-from truthzero.lab import LabManager, LABS
+from truthzero.lab import LABS, LabManager
+from truthzero.memory.guard import MemoryGuard
+from truthzero.swarm import (
+    Blackboard,
+    SwarmScheduler,
+    auth_holder_spec,
+    maybe_spawn,
+    mine,
+    param_fuzzer_spec,
+    plan_heal,
+    should_retry,
+)
 
 
 def test_selfheal_rules():
@@ -23,7 +29,7 @@ def test_miner_extracts():
             'Contact admin@example.com uuid 123e4567-e89b-12d3-a456-426614174000 '
             'api_key = "AKIA1234567890ABCDEF" id=42')
     leads = mine(text, source="resp", target="t")
-    kinds = {(l["ftype"], l["title"][:12]) for l in leads}
+    kinds = {(lead["ftype"], lead["title"][:12]) for lead in leads}
     assert any(f == "SECRET" for f, _ in kinds)
     assert any("email:" in t for f, t in kinds if f == "OBJECT_REF")
     assert any("uuid:" in t for f, t in kinds if f == "OBJECT_REF")

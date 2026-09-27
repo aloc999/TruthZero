@@ -1,7 +1,6 @@
-import pytest
-import json
 from truthzero.config import TruthZeroConfig
-from truthzero.validation import ConfigValidator, ConfigValidationError
+from truthzero.validation import ConfigValidator
+
 
 def test_default_config():
     config = TruthZeroConfig()
@@ -10,7 +9,6 @@ def test_default_config():
     assert config.memory_enabled is True
 
 def test_config_save_load(tmp_path):
-    from truthzero.config import CONFIG_DIR, CONFIG_FILE
     import truthzero.config as cfg_mod
     old_dir = cfg_mod.CONFIG_DIR
     old_file = cfg_mod.CONFIG_FILE
