@@ -197,6 +197,16 @@ Full policy: [SECURITY.md](SECURITY.md).
 // ═══════════════════ FULL DECK — INSTALL & DAILY USE ═══════════════════
 ```
 
+**Prerequisites**
+
+| Need | Version | Install |
+|---|---|---|
+| Python | 3.10+ | `apt install python3` / python.org |
+| pipx **or** uv (pick one) | any recent | `apt install pipx` · `curl -LsSf astral.sh/uv/install.sh \| sh` |
+| git + curl | any | `apt install git curl` |
+| Node.js | ≥16, **optional** — only for MCP servers (playwright/puppeteer/fetch) and `vsce` packaging | nodejs.org |
+| Docker | **optional** — only for vuln labs (`lab up`) and ZAP-via-docker | docker.com |
+
 **Install**
 
 ```bash
@@ -206,19 +216,73 @@ curl -fsSL https://raw.githubusercontent.com/aloc999/TruthZero/main/install.sh |
 # or: uv tool install git+https://github.com/aloc999/TruthZero.git
 # or from source:
 git clone https://github.com/aloc999/TruthZero.git && cd TruthZero && pipx install -e .
+# extras: pipx inject truthzero "truthzero[crypto,tui]"
 ```
 
-Requirements: Python 3.10+. Full chrome optionally: `apt install subfinder nmap nuclei ffuf sqlmap metasploit-framework`, `docker` for labs, Burp + REST API extension for the bridge, Postgres 16 + pgvector for the memory board.
+**Setup — API keys (pick at least one)**
 
-**Daily use**
+| Provider | Flag | Env var |
+|---|---|---|
+| Claude (default) | `claude` | `ANTHROPIC_API_KEY` |
+| OpenAI-compatible | `openai` | `OPENAI_API_KEY` |
+| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` |
+| GLM (Zhipu direct) | `glm` | `ZHIPU_API_KEY` |
+| Together AI | `together` | `PENTESTSWARM_ORCHESTRATOR_API_KEY` or `TOGETHER_API_KEY` |
+| Gemini | `gemini` | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) |
+| OrcaRouter | `orcarouter` | `PENTESTSWARM_ORCHESTRATOR_API_KEY` |
+| TypeSafe Jev (FP second opinion) | — | `TYPESAFE_API_KEY` |
+| Ollama / LM Studio (local, $0) | `ollama` / `lmstudio` | none — run Ollama, pull a model |
 
 ```bash
-truthzero                                 # interactive session
-truthzero -p together -m zai-org/GLM-5.3  # ride a cyber-bench leader
-truthzero run "map the API surface of shop.t"
+export ANTHROPIC_API_KEY="sk-ant-..."
+truthzero doctor     # health check: versions, keys, toolchain, network
+```
+
+Config lives at `~/.truthzero/config.json` (auto-created, validated on load; old `~/.zer0code/config.json` migrates automatically).
+
+**Required packages**
+
+Python deps install automatically (`requirements.txt` mirrors `pyproject.toml`: httpx, rich, click, prompt-toolkit, aiosqlite, pyyaml). Everything below is optional and fail-soft — missing tools print install hints instead of crashing:
+
+| Purpose | Packages | Install |
+|---|---|---|
+| Recon toolchain | subfinder, httpx, dnsx, gau, katana, naabu | `go install ...` or `truthzero install-tools` |
+| Scanning | nuclei, nmap, ffuf, zaproxy | `apt install nuclei nmap ffuf` |
+| Exploitation | sqlmap, metasploit-framework | `apt install sqlmap metasploit-framework` |
+| Hash cracking | hashcat, john | `apt install hashcat john` |
+| DNS/Whois | dnsutils, whois | `apt install dnsutils whois` |
+| Wordlists | seclists | `apt install seclists` |
+| Labs | docker | docker.com |
+| Intercept | Burp Suite + REST API extension (`:1337`) | portswigger.net |
+| Memory board | Postgres 16 + pgvector (`psycopg[binary]`) | `apt install postgresql-16-pgvector` |
+
+**Command-line reference**
+
+Global flags (every command): `-p/--provider`, `-m/--model`, `-r/--resume`, `-c/--continue-last`, `--tui`, `-t/--theme`, `--print-mode`.
+
+| Command | What it does |
+|---|---|
+| `truthzero` | Interactive REPL session |
+| `truthzero tui` | Full-screen Textual TUI (pickers, live campaign panel) |
+| `truthzero run "<prompt>"` | Single non-interactive prompt |
+| `truthzero scan <target> --scope <scope>` | Swarm hunt. Flags: `--swarm/--no-swarm`, `--rounds N`, `--budget S`, `--jev`, `--jev-adaptive`, `--strict`, `--lab --lab-target crapi\|juice\|vampi\|dvga` |
+| `truthzero playbook [list\|chains\|run <name> --target T]` | 5 YAML playbooks + chain library |
+| `truthzero lab [list\|up\|down] [name]` | Docker vuln labs (teardown on exit) |
+| `truthzero bench [--suite mini]` | Offline benchmark score |
+| `truthzero gate --sarif F [--fail-on high,critical]` | CI quality gate (exit 2 on breach) |
+| `truthzero asm diff <old.json> <new.json>` | Attack-surface delta |
+| `truthzero demo` | Offline campaign demo, zero network |
+| `truthzero serve [--port 7777]` | Live dashboard + API (`/api/findings`, `/api/sarif`, `POST /api/scan`) |
+| `truthzero mcp serve` | MCP stdio server (9 tools, Claude/Cursor) |
+| `truthzero doctor` | System health check |
+| `truthzero install-tools` | Toolchain status + install hints |
+| `truthzero sessions` / `memory` / `config` / `version` | Housekeeping |
+
+```bash
 truthzero scan shop.t --scope shop.t --swarm --jev-adaptive
 # flags: --no-swarm (sequential pass), --jev (FP sweep), --strict (exit 1 on failure)
-truthzero sessions / memory / doctor / install-tools
+truthzero lab up crapi && truthzero scan 127.0.0.1 --scope 127.0.0.1 --swarm
+truthzero gate --sarif truthzero-results.sarif   # CI: fails the build on high+
 ```
 
 **Interactive slash commands** — `/help /tools /clear /memory /config /model /provider /theme /skill /session /compact /cost /status /persona /template /proxy /branch /export /undo /plugin /serve /budget /creds /lsp /scope /workflow /exit` (tab-completion built in).

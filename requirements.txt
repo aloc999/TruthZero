@@ -1,5 +1,12 @@
+# Core runtime (mirrors pyproject.toml dependencies)
 httpx>=0.27.0
 rich>=13.7.0
 click>=8.1.0
 prompt-toolkit>=3.0.0
 aiosqlite>=0.20.0
+pyyaml>=6.0
+
+# Optional extras (pip install "truthzero[crypto,tui]" or pipx inject)
+# cryptography>=42.0   # real credential encryption (else base64 fallback)
+# textual>=0.70.0      # full-screen TUI (truthzero tui)
+# psycopg[binary]      # Postgres blackboard backend (else memory board)
