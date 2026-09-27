@@ -44,13 +44,13 @@ class SqlmapTool(BaseTool):
                       **kwargs) -> ToolResult:
         if not url:
             return ToolResult(output="", success=False, error="url required")
-        if not shutil.which("sqlmap"):
-            return ToolResult(output="", success=False,
-                              error="sqlmap not installed. Install: apt install sqlmap")
         for blocked in self.BLOCKED:
             if blocked in (extra_args or ""):
                 return ToolResult(output="", success=False,
                                   error=f"Blocked destructive flag: {blocked}")
+        if not shutil.which("sqlmap"):
+            return ToolResult(output="", success=False,
+                              error="sqlmap not installed. Install: apt install sqlmap")
         cmd = ["sqlmap", "-u", url, "--batch",
                f"--level={SAFE_LEVEL}", f"--risk={SAFE_RISK}",
                "--smart", "--answer", "crack=N,dict=N"]
