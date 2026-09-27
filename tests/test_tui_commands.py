@@ -176,6 +176,15 @@ async def test_model_picker_select_and_cancel():
 
 
 @pytest.mark.asyncio
+async def test_scan_out_of_scope_clean():
+    app = _app()
+    conv = FakeConv()
+    await app._handle_slash("/scan evil.com --scope example.com", conv)
+    assert "OUT OF SCOPE" in conv.text
+    assert "Hunting" not in conv.text
+
+
+@pytest.mark.asyncio
 async def test_escape_closes_panel_and_refocuses():
     from zer0code.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace

@@ -231,6 +231,7 @@ if HAS_TEXTUAL:
         #spinner-bar {
             dock: bottom;
             height: 1;
+            display: none;
             background: $surface;
         }
 
@@ -489,6 +490,10 @@ if HAS_TEXTUAL:
             spinner = self.query_one("#spinner-bar", SpinnerWidget)
             spinner.active = True
             spinner.action = action
+            try:
+                spinner.display = True
+            except Exception:
+                pass
             spinner.elapsed = 0.0
             self._process_start_time = time.monotonic()
             if self._spinner_timer:
@@ -510,6 +515,10 @@ if HAS_TEXTUAL:
             try:
                 spinner = self.query_one("#spinner-bar", SpinnerWidget)
                 spinner.active = False
+                try:
+                    spinner.display = False
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -1112,55 +1121,63 @@ if HAS_TEXTUAL:
                         elif t == "--jev":
                             jev = True
                     if not bad:
-                        conv.write(Text(f"  Hunting {target} [{mode}]…", style=_st(pal, "accent")))
-                        from textual.widgets import RichLog as _RL
-                        try:
-                            _side = self.query_one("#side-panel", _RL)
-                            _side.clear()
-                            if not self.show_panel:
-                                self.show_panel = True
-                                _side.add_class("visible")
-                        except Exception:
-                            _side = None
-
-                        def _progress(rno, fired, board, _side=_side, _pal=pal):
-                            if _side is None:
-                                return
+                        from zer0code.scope import ScopeManager as _SM
+                        _sm = _SM()
+                        for _s in [p.strip() for p in scope.split(",") if p.strip()]:
+                            _sm.add_in_scope(_s)
+                        if not _sm.is_in_scope(target):
+                            conv.write(Text(f"  Target '{target}' is OUT OF SCOPE", style=_st(pal, "err", bold=False)))
+                        else:
+                            conv.write(Text(f"  Hunting {target} [{mode}]…", style=_st(pal, "accent")))
+                            from textual.widgets import RichLog as _RL
                             try:
-                                total = len(board.all())
-                                confirmed = sum(1 for f in board.all()
-                                                if f.ftype == "VULN_CONFIRMED")
+                                _side = self.query_one("#side-panel", _RL)
                                 _side.clear()
-                                _side.write(Text(f"  NOW ▸ round {rno + 1}: {total} findings ({confirmed} confirmed)", style=_st(_pal, "primary")))
-                                pills = " → ".join(
-                                    f"{'✓' if fired.get(a) else '·'}{a}"
-                                    for a in ("recon", "classify", "exploit", "report"))
-                                _side.write(Text(f"  {pills}", style="dim"))
-                                sev = board.summary().get("by_severity", {})
-                                _side.write(Text("  " + " ".join(
-                                    f"{k}:{sev.get(k, 0)}" for k in ("critical", "high", "medium", "low", "info")), style="dim"))
-                                for f in board.all()[-4:]:
-                                    _side.write(Text(f"  ● [{f.severity}] {f.title[:60]}", style="dim"))
+                                if not self.show_panel:
+                                    self.show_panel = True
+                                    _side.add_class("visible")
                             except Exception:
-                                pass
+                                _side = None
 
-                        try:
-                            result, board_file = await run_headless_scan(
-                                target, scope=scope, rounds=rounds, mode=mode, jev=jev,
-                                on_event=_progress)
-                            self._last_board_file = board_file
-                            self._last_scan_cmd = f"/scan {args}"
-                            conv.write(Text(f"  Done: {result.rounds} rounds, {result.findings_total} findings, "
-                                            f"{result.confirmed} confirmed ({result.stopped_reason})", style=_st(pal, "primary")))
-                            conv.write(Text(f"  Board: {board_file}  ·  Ctrl+R re-run", style="dim"))
+                            def _progress(rno, fired, board, _side=_side, _pal=pal):
+                                if _side is None:
+                                    return
+                                try:
+                                    total = len(board.all())
+                                    confirmed = sum(1 for f in board.all()
+                                                    if f.ftype == "VULN_CONFIRMED")
+                                    _side.clear()
+                                    _side.write(Text(f"  NOW ▸ round {rno + 1}: {total} findings ({confirmed} confirmed)", style=_st(_pal, "primary")))
+                                    pills = " → ".join(
+                                        f"{'✓' if fired.get(a) else '·'}{a}"
+                                        for a in ("recon", "classify", "exploit", "report"))
+                                    _side.write(Text(f"  {pills}", style="dim"))
+                                    sev = board.summary().get("by_severity", {})
+                                    _side.write(Text("  " + " ".join(
+                                        f"{k}:{sev.get(k, 0)}" for k in ("critical", "high", "medium", "low", "info")), style="dim"))
+                                    for f in board.all()[-4:]:
+                                        _side.write(Text(f"  ● [{f.severity}] {f.title[:60]}", style="dim"))
+                                except Exception:
+                                    pass
+
                             try:
-                                self._render_side_home()
-                            except Exception:
-                                pass
-                        except PermissionError as e:
-                            conv.write(Text(f"  {e}", style=_st(pal, "err", bold=False)))
-                        except Exception as e:
-                            conv.write(Text(f"  Scan failed: {e}", style=_st(pal, "err", bold=False)))
+                                result, board_file = await run_headless_scan(
+                                    target, scope=scope, rounds=rounds, mode=mode, jev=jev,
+                                    on_event=_progress)
+                                self._last_board_file = board_file
+                                self._last_scan_cmd = f"/scan {args}"
+                                _rword = "round" if result.rounds == 1 else "rounds"
+                                conv.write(Text(f"  Done: {result.rounds} {_rword}, {result.findings_total} findings, "
+                                                f"{result.confirmed} confirmed ({result.stopped_reason})", style=_st(pal, "primary")))
+                                conv.write(Text(f"  Board: {board_file}  ·  Ctrl+R re-run", style="dim"))
+                                try:
+                                    self._render_side_home()
+                                except Exception:
+                                    pass
+                            except PermissionError as e:
+                                conv.write(Text(f"  {e}", style=_st(pal, "err", bold=False)))
+                            except Exception as e:
+                                conv.write(Text(f"  Scan failed: {e}", style=_st(pal, "err", bold=False)))
 
             elif command == "/lab":
                 from zer0code.lab import LabManager
