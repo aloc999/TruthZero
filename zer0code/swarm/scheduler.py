@@ -73,6 +73,7 @@ class SwarmScheduler:
         if not text:
             return 0
         count = 0
+        existing = {(f.ftype, f.title) for f in self.board.all()}
         # confirmed vuln markers
         for m in re.finditer(
             r"(CONFIRMED|VULN_CONFIRMED|P1|CRITICAL\s+VULN)\s*[:\-]\s*(.+)",
@@ -92,18 +93,25 @@ class SwarmScheduler:
                            detail=text[:2000], agent=agent_name,
                            target=target, severity="medium")
             count += 1
-        # object refs for BOLA chaining
-        seen_refs: set[str] = set()
-        for m in OBJECT_REF_RE.finditer(text[:20000]):
-            ref = m.group(1).strip().strip('"')[:80]
-            if ref and ref not in seen_refs and len(ref) >= 3:
-                seen_refs.add(ref)
-                self.board.add("OBJECT_REF", f"Object ref: {ref}",
-                               detail=f"Mined by {agent_name}", agent=agent_name,
-                               target=target, severity="info")
+        # response mining: every output becomes leads (Wave 3 runtime reaction)
+        try:
+            from zer0code.swarm.miner import mine as _mine
+            for lead in _mine(text, source=agent_name, target=target):
+                if (lead["ftype"], lead["title"]) in existing:
+                    continue
+                # ENDPOINT leads are noisy — only keep secrets + refs here;
+                # endpoints come from recon proper.
+                if lead["ftype"] == "ENDPOINT" and lead["severity"] != "high":
+                    continue
+                self.board.add(lead["ftype"], lead["title"],
+                               detail=lead.get("detail", ""), agent=agent_name,
+                               target=target, severity=lead.get("severity", "info"))
+                existing.add((lead["ftype"], lead["title"]))
                 count += 1
-                if len(seen_refs) >= 10:
+                if count >= 25:
                     break
+        except Exception:
+            pass
         return count
 
     # -- main loop ----------------------------------------------------------
@@ -137,6 +145,13 @@ class SwarmScheduler:
                                    len(self.board.all()),
                                    self._confirmed(), time.time() - started,
                                    "budget exhausted")
+            # Wave 3 emergence: spawn on-demand specialists when warranted.
+            try:
+                from zer0code.swarm.specialists import maybe_spawn as _spawn
+                for name in _spawn(self.board, self):
+                    fired[name] = fired.get(name, 0)
+            except Exception:
+                pass
             to_fire = [a for a in self.agents if a.should_fire(self.board, round_no)]
             if not to_fire:
                 self.board.prune_stale()

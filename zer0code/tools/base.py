@@ -16,3 +16,19 @@ class BaseTool:
 
     async def execute(self, **kwargs) -> ToolResult:
         raise NotImplementedError
+
+    @classmethod
+    def schema(cls) -> dict:
+        """OpenAI function-calling schema for this tool."""
+        params = getattr(cls, "parameters", None)
+        if not isinstance(params, dict):
+            # BaseTool itself stores a dataclasses.Field placeholder.
+            params = {"type": "object", "properties": {}}
+        return {
+            "type": "function",
+            "function": {
+                "name": getattr(cls, "name", ""),
+                "description": getattr(cls, "description", ""),
+                "parameters": params,
+            },
+        }

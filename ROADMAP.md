@@ -38,10 +38,20 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 
 ## Wave 3
 
-## Wave 3
-- Fine-tuned offensive model recipe (Pentest-R1 style)
-- Cybench / AutoPenBench / CVE-Bench numbers
-- Agent-memory poisoning hardening
-- Self-correcting attacks (closed-loop replanning on 401/403/415)
-- On-demand specialist sub-agents (auth holder, param fuzzer, chain builder)
-- Runtime reaction to discoveries (mine every response → emergent BOLA)
+## Wave 3 (shipped in v0.11.0)
+| Feature | Status | Notes |
+|---|---|---|
+| Self-correcting attacks | **beta** | `swarm/selfheal.py` — status-driven mutations + backoff |
+| Runtime reaction to discoveries | **beta** | `swarm/miner.py` — URLs/params/emails/UUIDs/secrets → board |
+| On-demand specialists | **beta** | `swarm/specialists.py` — auth-holder/param-fuzzer/chain-builder |
+| Vulnerable labs (docker) | **beta** | `zer0code/lab.py` — crapi/juice/vampi/dvga, cleanup-registered |
+| Memory-poisoning guard | **beta** | `memory/guard.py` — injection/quotas/controls |
+| Bench harness | **alpha** | `zer0code bench` local score; Cybench/AutoPenBench/CVE-Bench pending |
+| Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
+| Green test suite | **stable** | 43 passed, 0 failed |
+
+## Next
+- Cybench / AutoPenBench / CVE-Bench numbers (bench harness is ready)
+- Postgres similarity search via pgvector embeddings
+- Fine-tuned weights (recipe exists, training not run)
+- Marketplace listings (VS Code ext + GitHub Action exist in `deploy/`)

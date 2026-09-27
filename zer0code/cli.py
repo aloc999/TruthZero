@@ -1821,8 +1821,14 @@ def scan_cmd(ctx: click.Context, target: str, scope: str, swarm: bool,
     config = ctx.obj["config"]
     console = Console()
     if lab:
-        target = target or f"lab:{lab_target}"
-        console.print(Text(f"  [lab] would spin up {lab_target} (crAPI/Juice/VAmPI/DVGA) via docker — then attack + teardown.", style="yellow"))
+        from zer0code.lab import LabManager
+        try:
+            base_url = asyncio.run(LabManager().up(lab_target))
+            target = target or base_url
+            console.print(Text(f"  [lab] {lab_target} up at {target} (teardown on exit)", style="green"))
+        except Exception as e:
+            console.print(Text(f"  [lab] cannot start {lab_target}: {e}", style="yellow"))
+            target = target or f"lab:{lab_target}"
     if not target:
         console.print(Text("  Usage: zer0code scan <target> --scope <target> [--swarm]", style="red"))
         return
@@ -2011,6 +2017,44 @@ def asm_cmd(action: str, old: str, new: str) -> None:
         console.print(Text(ASMSnapshot().format_diff(d), style="cyan"))
     except Exception as e:
         console.print(Text(f"  ASM diff failed: {e}", style="red"))
+
+
+@cli.command(name="bench")
+def bench_cmd() -> None:
+    """Offline benchmark: canned campaign → detection/precision/chain score."""
+    import json as _json
+    from zer0code.bench import run_offline
+    console = Console()
+    res = asyncio.run(run_offline())
+    console.print(Text(f"  Bench score: {res['score']} "
+                       f"(detection {res['detection']}, precision {res['precision']}, "
+                       f"chains {res['chains']}, {res['duration_s']}s)", style="bold green"))
+    console.print(Text(f"  {_json.dumps(res)}", style="dim"))
+
+
+@cli.command(name="lab")
+@click.argument("action", required=False, default="list")
+@click.argument("name", required=False, default="")
+def lab_cmd(action: str, name: str) -> None:
+    """Vuln labs: `zer0code lab list | up <name> | down <name>`."""
+    from zer0code.lab import LabManager
+    console = Console()
+    mgr = LabManager()
+    if action == "list":
+        for spec in mgr.list_labs():
+            console.print(Text(f"  - {spec.name}: {spec.description} (:{spec.port})", style="cyan"))
+    elif action in ("up", "down") and name:
+        try:
+            if action == "up":
+                url = asyncio.run(mgr.up(name))
+                console.print(Text(f"  {name} up at {url}", style="green"))
+            else:
+                asyncio.run(mgr.down(name))
+                console.print(Text(f"  {name} down", style="green"))
+        except Exception as e:
+            console.print(Text(f"  lab {action} failed: {e}", style="red"))
+    else:
+        console.print(Text("  Usage: zer0code lab [list|up|down] <name>", style="red"))
 
 
 def main() -> None:

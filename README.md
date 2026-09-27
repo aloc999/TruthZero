@@ -45,13 +45,25 @@ Inspired by [Pentest-Swarm-AI](https://github.com/Armur-Ai/Pentest-Swarm-AI): ZE
 
 ```bash
 zer0code scan target.com --scope target.com --swarm          # scriptable swarm
-zer0code scan --lab --lab-target crapi --swarm               # bundled vuln lab
+zer0code lab up crapi                                       # bundled vuln lab (docker)
+zer0code scan 127.0.0.1 --scope 127.0.0.1 --swarm            # attack the lab
 zer0code playbook run bug-bounty --target target.com
 zer0code demo                                                # offline campaign demo
+zer0code bench                                               # offline benchmark score
 zer0code gate --sarif zer0code-results.sarif                 # CI quality gate
 zer0code asm diff old.json new.json                          # ASM delta
 zer0code mcp serve                                           # MCP stdio server
 ```
+
+## What's New in v0.11.0 — Wave 3 🧠
+
+- **Self-correcting attacks** — 401/403/415/429/5xx feed back into header/backoff mutations; heals instead of dead-ending
+- **Response miner** — every tool output mined for URLs, params, emails, UUIDs, secrets → one leak becomes emergent BOLA probes
+- **On-demand specialists** — `auth-holder`, `param-fuzzer`, `chain-builder` spawn when board state warrants, die when done
+- **Real labs** — `zer0code lab up/down crapi|juice|vampi|dvga` (docker, teardown on exit); `scan --lab` spins up for real
+- **Memory-poisoning guard** — injection patterns, quotas, control-char checks before Hermes learns
+- **Bench harness** — `zer0code bench` scores detection/precision/chaining; training recipe in `docs/training-recipe.md`
+- **Green suite** — 43 passed, 0 failed (async-runner fallback in `conftest.py`, `BaseTool.schema()` for all tools)
 
 ## What's New in v0.10.0 — Wave 2 🌊
 
