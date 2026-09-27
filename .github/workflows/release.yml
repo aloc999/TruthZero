@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 jobs:
   test:
@@ -21,6 +22,7 @@ jobs:
   publish-pypi:
     needs: test
     runs-on: ubuntu-latest
+    if: ${{ secrets.PYPI_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
