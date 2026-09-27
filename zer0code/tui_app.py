@@ -23,15 +23,11 @@ except ImportError:
     pass
 
 BANNER_LINES = [
-    "  ░▒▓█████████████████████████████████████████████████▓▒░",
+    "  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
     "",
-    "    █████ █████ ████   ███   ████  ███  ████  █████",
-    "       █  █     █   █ █   █ █     █   █ █   █ █    ",
-    "      █   ████  ████  █ ▀ █ █     █   █ █   █ ████ ",
-    "     █    █     █  █  █   █ █     █   █ █   █ █    ",
-    "    █████ █████ █   █  ███   ████  ███  ████  █████",
+    "   ZER0CODE  //  HACK THE PLANET AT MACHINE SPEED",
     "",
-    "  ░▒▓█████████████████████████████████████████████████▓▒░",
+    "  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
 ]
 
 SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -42,6 +38,41 @@ SLASH_COMMANDS = [
     "/budget", "/export", "/undo", "/branch", "/doctor", "/init", "/files",
     "/search", "/theme", "/step", "/exit", "/quit", "/copy",
 ]
+
+# -- neon palettes: config theme -> TUI colors (cyberpunk default energy) --
+TUI_PALETTES = {
+    "hacker": {"primary": "#00ff41", "accent": "#00d0ff", "hot": "#00ff88",
+               "warn": "#ffff00", "err": "#ff3131", "persona": "#ff00ff",
+               "bg": "#0a0a0a", "surface": "#111111", "edge": "#333333"},
+    "cyberpunk": {"primary": "#ff2a6d", "accent": "#00f0ff", "hot": "#05ffa1",
+                  "warn": "#ffd319", "err": "#ff3131", "persona": "#7b2ff7",
+                  "bg": "#05010f", "surface": "#0d0221", "edge": "#7b2ff7"},
+    "dark": {"primary": "#4d9fff", "accent": "#00d0ff", "hot": "#00ffa1",
+             "warn": "#ffb000", "err": "#ff5555", "persona": "#bb88ff",
+             "bg": "#0d1117", "surface": "#161b22", "edge": "#30363d"},
+    "minimal": {"primary": "#ffffff", "accent": "#00e5ff", "hot": "#ffffff",
+                "warn": "#ffff00", "err": "#ff5555", "persona": "#ffffff",
+                "bg": "#000000", "surface": "#0a0a0a", "edge": "#444444"},
+}
+
+
+def tui_palette(theme_name: str | None) -> dict:
+    return TUI_PALETTES.get(theme_name or "hacker", TUI_PALETTES["hacker"])
+
+
+def _app_pal(widget) -> dict:
+    try:
+        return widget.app._tui_pal
+    except Exception:
+        return TUI_PALETTES["hacker"]
+
+def build_tui_css(template: str, pal: dict) -> str:
+    """Render the Textual stylesheet for a palette (safe substitute)."""
+    import string
+    return string.Template(template).safe_substitute(pal)
+
+def _st(pal: dict, role: str, bold: True | bool = True, pre: str = "") -> str:
+    return f"{pre}{'bold ' if bold else ''}{pal[role]}"
 
 if HAS_TEXTUAL:
 
@@ -54,17 +85,18 @@ if HAS_TEXTUAL:
         provider = reactive("")
 
         def render(self) -> Text:
+            pal = _app_pal(self)
             bar = Text()
-            bar.append(" ⚡ ", style="bold yellow")
-            bar.append(f"{self.provider}", style="bold green")
+            bar.append(" ⚡ ", style=_st(pal, "warn"))
+            bar.append(f"{self.provider}", style=_st(pal, "primary"))
             bar.append("/", style="dim")
-            bar.append(f"{self.model}", style="bold green")
+            bar.append(f"{self.model}", style=_st(pal, "primary"))
             bar.append("  │  ", style="dim")
-            bar.append(f"tokens: {self.tokens:,}", style="cyan")
+            bar.append(f"tokens: {self.tokens:,}", style=_st(pal, "accent", bold=False))
             bar.append("  │  ", style="dim")
-            bar.append(f"{self.cost}", style="cyan")
+            bar.append(f"{self.cost}", style=_st(pal, "accent", bold=False))
             bar.append("  │  ", style="dim")
-            pct_style = "bold red" if self.context_pct > 80 else "yellow" if self.context_pct > 50 else "cyan"
+            pct_style = _st(pal, "err") if self.context_pct > 80 else _st(pal, "warn", bold=False) if self.context_pct > 50 else _st(pal, "accent", bold=False)
             bar.append(f"ctx: {self.context_pct}%", style=pct_style)
             bar.append("  │  ", style="dim")
             bar.append(f"{self.session_id[:8]}", style="dim")
@@ -82,16 +114,17 @@ if HAS_TEXTUAL:
         branch_name = reactive("main")
 
         def render(self) -> Text:
+            pal = _app_pal(self)
             bc = Text()
             bc.append("  ", style="")
             if self.persona_name != "default":
-                bc.append(f"⚔ {self.persona_name}", style="bold magenta")
+                bc.append(f"⚔ {self.persona_name}", style=_st(pal, "persona"))
                 bc.append("  ", style="")
             if self.loaded_skills:
-                bc.append(f"📚 {self.loaded_skills}", style="bold cyan")
+                bc.append(f"📚 {self.loaded_skills}", style=_st(pal, "accent"))
                 bc.append("  ", style="")
             if self.branch_name != "main":
-                bc.append(f"⑂ {self.branch_name}", style="bold yellow")
+                bc.append(f"⑂ {self.branch_name}", style=_st(pal, "warn"))
             return bc
 
     class SpinnerWidget(Static):
@@ -101,12 +134,13 @@ if HAS_TEXTUAL:
         active = reactive(False)
 
         def render(self) -> Text:
+            pal = _app_pal(self)
             if not self.active:
                 return Text("")
             spinner = SPINNER_FRAMES[self.frame_idx % len(SPINNER_FRAMES)]
             t = Text()
-            t.append(f"  {spinner} ", style="bold green")
-            t.append(self.action or "Thinking", style="bold yellow")
+            t.append(f"  {spinner} ", style=_st(pal, "primary"))
+            t.append(self.action or "Thinking", style=_st(pal, "warn"))
             if self.elapsed > 0:
                 t.append(f"  ({self.elapsed:.1f}s)", style="dim")
             return t
@@ -114,30 +148,30 @@ if HAS_TEXTUAL:
     class ZeroCodeTUI(App):
         TITLE = "ZER0CODE"
 
-        CSS = """
+        _CSS_TEMPLATE = """
         Screen {
             layout: vertical;
-            background: #0a0a0a;
+            background: $bg;
         }
 
         #header-bar {
             dock: top;
             height: 1;
-            background: #111111;
-            color: #00ff41;
+            background: $surface;
+            color: $primary;
             padding: 0 1;
         }
 
         #breadcrumb {
             dock: top;
             height: 1;
-            background: #0d0d0d;
+            background: $surface;
         }
 
         #spinner-bar {
             dock: bottom;
             height: 1;
-            background: #0d0d0d;
+            background: $surface;
         }
 
         #main-area {
@@ -148,19 +182,19 @@ if HAS_TEXTUAL:
             width: 1fr;
             min-width: 40;
             scrollbar-size: 1 1;
-            background: #0a0a0a;
-            scrollbar-background: #111111;
-            scrollbar-color: #333333;
+            background: $bg;
+            scrollbar-background: $surface;
+            scrollbar-color: $edge;
         }
 
         #side-panel {
             width: 45;
             display: none;
-            border-left: solid #333333;
-            background: #0a0a0a;
+            border-left: solid $edge;
+            background: $bg;
             scrollbar-size: 1 1;
-            scrollbar-background: #111111;
-            scrollbar-color: #333333;
+            scrollbar-background: $surface;
+            scrollbar-color: $edge;
         }
 
         #side-panel.visible {
@@ -172,23 +206,23 @@ if HAS_TEXTUAL:
             height: auto;
             max-height: 6;
             padding: 0 1;
-            background: #0a0a0a;
+            background: $bg;
         }
 
         #input-box Input {
-            border: tall #00ff41;
-            background: #111111;
-            color: #00ff41;
+            border: tall $primary;
+            background: $surface;
+            color: $primary;
         }
 
         #input-box Input:focus {
-            border: tall #00ff88;
+            border: tall $hot;
         }
 
         #status-bar {
             dock: bottom;
             height: 1;
-            background: #111111;
+            background: $surface;
         }
 
         RichLog {
@@ -196,7 +230,7 @@ if HAS_TEXTUAL:
         }
 
         Footer {
-            background: #111111;
+            background: $surface;
         }
         """
 
@@ -218,6 +252,11 @@ if HAS_TEXTUAL:
             super().__init__(**kwargs)
             self.agent = agent
             self.config = config
+            if isinstance(config, dict):
+                theme_name = config.get("theme", "hacker")
+            else:
+                theme_name = getattr(config, "theme", "hacker") or "hacker"
+            self._tui_pal = tui_palette(theme_name)
             self._processing = False
             self._input_history: list[str] = []
             self._history_idx = -1
@@ -227,14 +266,15 @@ if HAS_TEXTUAL:
             self._search_mode = False
 
         def compose(self) -> ComposeResult:
+            pal = self._tui_pal
             provider = self.config.provider if self.config else "?"
             model = self.config.model if self.config else "?"
             header_text = Text()
-            header_text.append("  ⚡ ZER0CODE ", style="bold green")
+            header_text.append("  ⚡ ZER0CODE ", style=_st(pal, "primary"))
             header_text.append("│ ", style="dim white")
-            header_text.append(f"{provider}/{model} ", style="bold cyan")
+            header_text.append(f"{provider}/{model} ", style=_st(pal, "accent"))
             header_text.append("│ ", style="dim white")
-            header_text.append("OPERATIONAL", style="bold green")
+            header_text.append("OPERATIONAL", style=_st(pal, "primary"))
             yield Static(header_text, id="header-bar")
             yield ContextBreadcrumb(id="breadcrumb")
 
@@ -255,23 +295,24 @@ if HAS_TEXTUAL:
             yield Footer()
 
         def on_mount(self) -> None:
+            pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
 
             for line in BANNER_LINES:
-                conv.write(Text(line, style="bold green"))
+                conv.write(Text(line, style=_st(pal, "primary")))
             conv.write(Text(""))
-            conv.write(Text("              ⚡ AUTONOMOUS PENTESTING AGENT ⚡", style="bold cyan"))
+            conv.write(Text("              ⚡ AUTONOMOUS PENTESTING AGENT ⚡", style=_st(pal, "accent")))
             conv.write(Text(""))
 
             info = Text()
             if self.config:
                 info.append(f"  Provider: ", style="dim")
-                info.append(f"{self.config.provider}", style="bold cyan")
+                info.append(f"{self.config.provider}", style=_st(pal, "accent"))
                 info.append(f"  │  Model: ", style="dim")
-                info.append(f"{self.config.model}", style="bold cyan")
+                info.append(f"{self.config.model}", style=_st(pal, "accent"))
             if self.agent and self.agent.session_id:
                 info.append(f"  │  Session: ", style="dim")
-                info.append(f"{self.agent.session_id}", style="bold cyan")
+                info.append(f"{self.agent.session_id}", style=_st(pal, "accent"))
             conv.write(info)
 
             tools_count = len(self.agent.tool_registry) if self.agent else 0
@@ -322,6 +363,7 @@ if HAS_TEXTUAL:
             return datetime.now().strftime("%H:%M:%S")
 
         async def on_input_submitted(self, event: Input.Submitted) -> None:
+            pal = self._tui_pal
             if event.input.id != "user-input":
                 return
             user_input = event.value.strip()
@@ -350,13 +392,13 @@ if HAS_TEXTUAL:
             conv.write(Text(""))
             user_line = Text()
             user_line.append(f"  {ts} ", style="dim")
-            user_line.append("❯ ", style="bold cyan")
+            user_line.append("❯ ", style=_st(pal, "accent"))
             user_line.append(user_input, style="bold white")
             conv.write(user_line)
             conv.write(Text(""))
 
             if not self.agent:
-                conv.write(Panel(Text("Agent not initialized", style="white"), border_style="red", title="Error"))
+                conv.write(Panel(Text("Agent not initialized", style="white"), border_style=pal["err"], title="Error"))
                 return
 
             self._processing = True
@@ -367,12 +409,14 @@ if HAS_TEXTUAL:
                 self.call_from_thread(self._show_tool_call, name, args)
 
             def on_tool_result(name, result, hook_msgs=None):
+                pal = self._tui_pal
                 self.call_from_thread(self._show_tool_result, name, result)
 
             self.agent.set_callbacks(on_tool_call=on_tool_call, on_tool_result=on_tool_result)
             self.run_worker(self._run_agent_stream(user_input), thread=True)
 
         async def _run_agent_stream(self, user_input: str) -> None:
+            pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
             ts = self._ts()
             collected_text = []
@@ -410,19 +454,19 @@ if HAS_TEXTUAL:
                         md = Markdown(response_text, code_theme="monokai")
                         conv.write(md)
                     except Exception:
-                        conv.write(Text(f"  {response_text}", style="green"))
+                        conv.write(Text(f"  {response_text}", style=_st(pal, "primary", bold=False)))
 
                     cost_line = Text()
                     cost_line.append(f"\n  {self._ts()} ", style="dim")
-                    cost_line.append(f"tokens: {self.agent.total_tokens:,}", style="dim cyan")
-                    cost_line.append(f"  │  cost: {self.agent.total_cost}", style="dim cyan")
-                    cost_line.append(f"  │  ctx: {self.agent.context_window_percent}%", style="dim cyan")
+                    cost_line.append(f"tokens: {self.agent.total_tokens:,}", style=_st(pal, "accent", bold=False, pre="dim "))
+                    cost_line.append(f"  │  cost: {self.agent.total_cost}", style=_st(pal, "accent", bold=False, pre="dim "))
+                    cost_line.append(f"  │  ctx: {self.agent.context_window_percent}%", style=_st(pal, "accent", bold=False, pre="dim "))
                     elapsed = time.monotonic() - self._process_start_time
                     cost_line.append(f"  │  {elapsed:.1f}s", style="dim")
                     conv.write(cost_line)
 
             except Exception as e:
-                conv.write(Panel(Text(str(e), style="white"), border_style="red", title=Text("Error", style="bold red"), padding=(0, 1)))
+                conv.write(Panel(Text(str(e), style="white"), border_style=pal["err"], title=Text("Error", style=_st(pal, "err")), padding=(0, 1)))
             finally:
                 self._processing = False
                 self._stop_spinner()
@@ -454,13 +498,14 @@ if HAS_TEXTUAL:
             return "", text
 
         def _show_tool_call(self, name: str, args: dict) -> None:
+            pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
             ts = self._ts()
 
             header = Text()
             header.append(f"  {ts} ", style="dim")
-            header.append("▶ ", style="bold magenta")
-            header.append(name, style="bold magenta")
+            header.append("▶ ", style=_st(pal, "persona"))
+            header.append(name, style=_st(pal, "persona"))
             self._tool_start_time = time.monotonic()
 
             arg_text = Text()
@@ -470,23 +515,24 @@ if HAS_TEXTUAL:
                     val = val[:97] + "..."
                 arg_text.append(f"    {k}", style="dim")
                 arg_text.append("=", style="white")
-                arg_text.append(f"{val}\n", style="cyan")
+                arg_text.append(f"{val}\n", style=_st(pal, "accent", bold=False))
 
             from rich.console import Group
             panel = Panel(
                 Group(header, arg_text),
-                border_style="magenta",
+                border_style=pal["persona"],
                 padding=(0, 1),
                 expand=True,
             )
             conv.write(panel)
 
             side = self.query_one("#side-panel", RichLog)
-            side.write(Text(f"\n  {ts}  ▶ {name}", style="bold magenta"))
+            side.write(Text(f"\n  {ts}  ▶ {name}", style=_st(pal, "persona")))
             for k, v in args.items():
                 side.write(Text(f"    {k}={str(v)[:60]}", style="dim"))
 
         def _show_tool_result(self, name: str, result) -> None:
+            pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
             ts = self._ts()
             tool_elapsed = time.monotonic() - self._tool_start_time
@@ -494,7 +540,7 @@ if HAS_TEXTUAL:
             output = getattr(result, "output", str(result)) if success else (getattr(result, "error", str(result)) or "Error")
 
             icon = "✓" if success else "✗"
-            style = "green" if success else "red"
+            style = pal["primary"] if success else pal["err"]
 
             title = Text()
             title.append(f" {icon} ", style=f"bold {style}")
@@ -518,20 +564,22 @@ if HAS_TEXTUAL:
             side.write(Text(f"    {side_out}", style="dim"))
 
         def _show_diff_result(self, conv: RichLog, output: str, name: str, title: Text) -> None:
+            pal = self._tui_pal
             diff_text = Text()
             for line in output.split("\n"):
                 if line.startswith("+") and not line.startswith("+++"):
-                    diff_text.append(line + "\n", style="green")
+                    diff_text.append(line + "\n", style=_st(pal, "primary", bold=False))
                 elif line.startswith("-") and not line.startswith("---"):
-                    diff_text.append(line + "\n", style="red")
+                    diff_text.append(line + "\n", style=_st(pal, "err", bold=False))
                 elif line.startswith("@@"):
-                    diff_text.append(line + "\n", style="cyan")
+                    diff_text.append(line + "\n", style=_st(pal, "accent", bold=False))
                 else:
                     diff_text.append(line + "\n", style="dim")
-            panel = Panel(diff_text, border_style="cyan", title=title, title_align="left", padding=(0, 1), expand=True)
+            panel = Panel(diff_text, border_style=pal["accent"], title=title, title_align="left", padding=(0, 1), expand=True)
             conv.write(panel)
 
         def _do_search(self, query: str) -> None:
+            pal = self._tui_pal
             conv = self.query_one("#conversation", RichLog)
             if not self.agent:
                 return
@@ -547,11 +595,12 @@ if HAS_TEXTUAL:
                     if matches >= 15:
                         break
             if matches == 0:
-                conv.write(Text(f"  No matches for '{query}'", style="dim yellow"))
+                conv.write(Text(f"  No matches for '{query}'", style=_st(pal, "warn", bold=False, pre="dim ")))
             else:
-                conv.write(Text(f"  {matches} match(es) found", style="dim green"))
+                conv.write(Text(f"  {matches} match(es) found", style=_st(pal, "primary", bold=False, pre="dim ")))
 
         async def _handle_slash(self, cmd: str, conv: RichLog) -> None:
+            pal = self._tui_pal
             parts = cmd.strip().split(maxsplit=1)
             command = parts[0].lower()
             args = parts[1] if len(parts) > 1 else ""
@@ -588,10 +637,10 @@ if HAS_TEXTUAL:
                     ("Ctrl+D", "Exit"),
                     ("Up/Down", "Input history"),
                 ]
-                conv.write(Text("\n  ZER0CODE Commands\n", style="bold green"))
+                conv.write(Text("\n  ZER0CODE Commands\n", style=_st(pal, "primary")))
                 for c, d in help_cmds:
                     line = Text()
-                    line.append(f"  {c:<22}", style="bold cyan")
+                    line.append(f"  {c:<22}", style=_st(pal, "accent"))
                     line.append(d, style="dim")
                     conv.write(line)
                 conv.write(Text(""))
@@ -600,15 +649,15 @@ if HAS_TEXTUAL:
                 conv.clear()
                 if self.agent:
                     self.agent.reset()
-                conv.write(Text("  Conversation cleared.\n", style="bold green"))
+                conv.write(Text("  Conversation cleared.\n", style=_st(pal, "primary")))
 
             elif command == "/tools":
                 if self.agent:
-                    conv.write(Text("\n  Registered Tools\n", style="bold magenta"))
+                    conv.write(Text("\n  Registered Tools\n", style=_st(pal, "persona")))
                     for name, tool in sorted(self.agent.tool_registry.items()):
                         desc = getattr(tool, "description", "")[:50]
                         line = Text()
-                        line.append(f"  {name:<22}", style="bold magenta")
+                        line.append(f"  {name:<22}", style=_st(pal, "persona"))
                         line.append(desc, style="dim")
                         conv.write(line)
                     conv.write(Text(f"\n  {len(self.agent.tool_registry)} tools\n", style="dim"))
@@ -616,18 +665,18 @@ if HAS_TEXTUAL:
             elif command == "/status":
                 self._update_status()
                 if self.agent:
-                    conv.write(Text(f"  Tokens: {self.agent.total_tokens:,} | Cost: {self.agent.total_cost} | Context: {self.agent.context_window_percent}% | Messages: {self.agent.message_count}", style="cyan"))
+                    conv.write(Text(f"  Tokens: {self.agent.total_tokens:,} | Cost: {self.agent.total_cost} | Context: {self.agent.context_window_percent}% | Messages: {self.agent.message_count}", style=_st(pal, "accent", bold=False)))
 
             elif command == "/config":
                 if self.config:
                     for k, v in [("Provider", self.config.provider), ("Model", self.config.model), ("Theme", self.config.theme), ("Memory", str(self.config.memory_enabled)), ("Session", self.agent.session_id if self.agent else "N/A")]:
-                        conv.write(Text(f"  {k}: {v}", style="cyan"))
+                        conv.write(Text(f"  {k}: {v}", style=_st(pal, "accent", bold=False)))
 
             elif command == "/model":
                 if args and self.config:
                     self.config.model = args.strip()
                     self.config.save()
-                    conv.write(Text(f"  Model → {self.config.model}", style="bold green"))
+                    conv.write(Text(f"  Model → {self.config.model}", style=_st(pal, "primary")))
                     self._update_status()
                     self._update_header()
                 else:
@@ -639,25 +688,25 @@ if HAS_TEXTUAL:
                     if p in ("openai", "anthropic", "deepseek", "ollama"):
                         self.config.provider = p
                         self.config.save()
-                        conv.write(Text(f"  Provider → {p}", style="bold green"))
+                        conv.write(Text(f"  Provider → {p}", style=_st(pal, "primary")))
                         self._update_status()
                         self._update_header()
                     else:
-                        conv.write(Text("  Valid: openai, anthropic, deepseek, ollama", style="red"))
+                        conv.write(Text("  Valid: openai, anthropic, deepseek, together, gemini, ollama, lmstudio, orcarouter", style=_st(pal, "err", bold=False)))
                 else:
                     conv.write(Text(f"  Current: {self.config.provider if self.config else '?'}", style="dim"))
 
             elif command == "/cost":
                 if self.agent:
                     s = self.agent.cost_tracker.summary()
-                    conv.write(Text(f"  Total: {s['total_tokens']:,} tokens (in: {s['input_tokens']:,}, out: {s['output_tokens']:,})", style="cyan"))
-                    conv.write(Text(f"  Cost: {self.agent.total_cost} | Requests: {s['requests']}", style="cyan"))
+                    conv.write(Text(f"  Total: {s['total_tokens']:,} tokens (in: {s['input_tokens']:,}, out: {s['output_tokens']:,})", style=_st(pal, "accent", bold=False)))
+                    conv.write(Text(f"  Cost: {self.agent.total_cost} | Requests: {s['requests']}", style=_st(pal, "accent", bold=False)))
 
             elif command == "/compact":
                 if self.agent and self.agent.compactor:
                     old = len(self.agent.conversation_history)
                     self.agent.conversation_history = await self.agent.compactor.compact(self.agent.conversation_history)
-                    conv.write(Text(f"  Compacted: {old} → {len(self.agent.conversation_history)} messages", style="bold green"))
+                    conv.write(Text(f"  Compacted: {old} → {len(self.agent.conversation_history)} messages", style=_st(pal, "primary")))
 
             elif command == "/export":
                 if self.agent:
@@ -665,14 +714,14 @@ if HAS_TEXTUAL:
                     fmt = "html" if filepath.endswith(".html") else "md"
                     metadata = {"provider": self.config.provider if self.config else "", "model": self.config.model if self.config else "", "session_id": self.agent.session_id}
                     saved = self.agent.exporter.save(self.agent.conversation_history, filepath, format=fmt, metadata=metadata)
-                    conv.write(Text(f"  Exported → {saved}", style="bold green"))
+                    conv.write(Text(f"  Exported → {saved}", style=_st(pal, "primary")))
 
             elif command == "/skill":
                 from zer0code.skills.loader import SkillLoader
                 loader = SkillLoader()
                 if not args:
                     for cat, skills in loader.list_by_category().items():
-                        conv.write(Text(f"\n  {cat}", style="bold magenta"))
+                        conv.write(Text(f"\n  {cat}", style=_st(pal, "persona")))
                         for sk in skills:
                             conv.write(Text(f"    {sk['name']:<22} {sk.get('description', '')[:40]}", style="dim"))
                     conv.write(Text(f"\n  {loader.count} skills | /skill <name> to load\n", style="dim"))
@@ -680,10 +729,10 @@ if HAS_TEXTUAL:
                     skill = loader.get_skill(args.strip())
                     if skill and self.agent:
                         self.agent.conversation_history.append({"role": "system", "content": f"LOADED SKILL: {skill.get('title', skill['name'])}\n\n{skill['system_prompt_addition']}"})
-                        conv.write(Text(f"  Loaded: {skill.get('title', skill['name'])} ({skill.get('lines', '?')} lines)", style="bold green"))
+                        conv.write(Text(f"  Loaded: {skill.get('title', skill['name'])} ({skill.get('lines', '?')} lines)", style=_st(pal, "primary")))
                         self._update_breadcrumb(skill_name=args.strip())
                     else:
-                        conv.write(Text(f"  Not found: {args.strip()}", style="red"))
+                        conv.write(Text(f"  Not found: {args.strip()}", style=_st(pal, "err", bold=False)))
 
             elif command == "/persona":
                 from zer0code.personas import PersonaManager
@@ -692,7 +741,7 @@ if HAS_TEXTUAL:
                     persona = pm.get_persona(args.strip())
                     if persona:
                         self.agent.conversation_history.append({"role": "system", "content": persona.system_prompt})
-                        conv.write(Text(f"  Persona → {persona.title}", style="bold green"))
+                        conv.write(Text(f"  Persona → {persona.title}", style=_st(pal, "primary")))
                         self._update_breadcrumb(persona_name=args.strip())
                     else:
                         conv.write(Text(f"  Available: {', '.join(pm.list_personas())}", style="dim"))
@@ -714,7 +763,7 @@ if HAS_TEXTUAL:
                 for check in results:
                     s = check["status"]
                     icon = "✓" if s == "pass" else "⚠" if s == "warn" else "✗"
-                    st = "green" if s == "pass" else "yellow" if s == "warn" else "red"
+                    st = pal["primary"] if s == "pass" else pal["warn"] if s == "warn" else pal["err"]
                     conv.write(Text(f"  {icon} {check['name']:<18} {check['detail']}", style=st))
                 conv.write(Text(f"\n  {doc.summary}\n", style="dim"))
 
@@ -723,7 +772,7 @@ if HAS_TEXTUAL:
                 from pathlib import Path
                 pi = ProjectInitializer()
                 fp = pi.save()
-                conv.write(Text(f"  Generated → {fp}", style="bold green"))
+                conv.write(Text(f"  Generated → {fp}", style=_st(pal, "primary")))
 
             elif command == "/files":
                 if self.agent and self.agent.file_index:
@@ -735,17 +784,17 @@ if HAS_TEXTUAL:
 
             elif command == "/step":
                 self.step_mode = not self.step_mode
-                conv.write(Text(f"  Step mode: {'ON' if self.step_mode else 'OFF'}", style="bold green"))
+                conv.write(Text(f"  Step mode: {'ON' if self.step_mode else 'OFF'}", style=_st(pal, "primary")))
 
             elif command == "/theme":
                 self.dark = not self.dark
-                conv.write(Text(f"  Theme toggled", style="bold green"))
+                conv.write(Text(f"  Theme toggled", style=_st(pal, "primary")))
 
             elif command == "/budget":
                 if args and self.agent:
                     try:
                         self.agent.token_budget = float(args.strip().replace("$", ""))
-                        conv.write(Text(f"  Budget → ${self.agent.token_budget:.2f}", style="bold green"))
+                        conv.write(Text(f"  Budget → ${self.agent.token_budget:.2f}", style=_st(pal, "primary")))
                     except ValueError:
                         conv.write(Text("  Usage: /budget <amount>", style="dim"))
                 elif self.agent:
@@ -755,15 +804,15 @@ if HAS_TEXTUAL:
                 if self.agent:
                     if args == "all":
                         restored = self.agent.rollback.rollback_all()
-                        conv.write(Text(f"  Restored {len(restored)} files", style="bold green"))
+                        conv.write(Text(f"  Restored {len(restored)} files", style=_st(pal, "primary")))
                     elif args == "list":
                         for c in self.agent.rollback.list_changes():
                             conv.write(Text(f"  {c['filepath']}", style="dim"))
                     elif args:
                         if self.agent.rollback.rollback(args.strip()):
-                            conv.write(Text(f"  Restored: {args.strip()}", style="bold green"))
+                            conv.write(Text(f"  Restored: {args.strip()}", style=_st(pal, "primary")))
                         else:
-                            conv.write(Text(f"  No snapshot for: {args.strip()}", style="red"))
+                            conv.write(Text(f"  No snapshot for: {args.strip()}", style=_st(pal, "err", bold=False)))
                     else:
                         conv.write(Text("  Usage: /undo [all|list|<file>]", style="dim"))
 
@@ -777,12 +826,12 @@ if HAS_TEXTUAL:
                         name = self.agent.brancher.create_branch(args[7:].strip())
                         self.agent.brancher.switch_branch(name)
                         self.agent.conversation_history = self.agent.brancher.current_messages
-                        conv.write(Text(f"  Branch created → {name}", style="bold green"))
+                        conv.write(Text(f"  Branch created → {name}", style=_st(pal, "primary")))
                         self._update_breadcrumb(branch_name=name)
                     elif args.startswith("switch "):
                         if self.agent.brancher.switch_branch(args[7:].strip()):
                             self.agent.conversation_history = self.agent.brancher.current_messages
-                            conv.write(Text(f"  Switched → {args[7:].strip()}", style="bold green"))
+                            conv.write(Text(f"  Switched → {args[7:].strip()}", style=_st(pal, "primary")))
                             self._update_breadcrumb(branch_name=args[7:].strip())
 
             elif command in ("/exit", "/quit"):
@@ -792,7 +841,7 @@ if HAS_TEXTUAL:
                 self.action_copy_last()
 
             else:
-                conv.write(Text(f"  Unknown: {command}  — type /help", style="yellow"))
+                conv.write(Text(f"  Unknown: {command}  — type /help", style=_st(pal, "warn", bold=False)))
 
         def on_key(self, event) -> None:
             if self._processing:
@@ -855,6 +904,7 @@ if HAS_TEXTUAL:
             conv.auto_scroll = self.auto_scroll
 
         def action_copy_last(self) -> None:
+            pal = self._tui_pal
             if not self.agent:
                 return
             last_response = ""
@@ -880,18 +930,19 @@ if HAS_TEXTUAL:
                 except Exception:
                     pass
                 conv = self.query_one("#conversation", RichLog)
-                conv.write(Text(f"  Copied {len(last_response)} chars to clipboard", style="bold green"))
+                conv.write(Text(f"  Copied {len(last_response)} chars to clipboard", style=_st(pal, "primary")))
 
         def _update_header(self) -> None:
+            pal = self._tui_pal
             try:
                 header = self.query_one("#header-bar", Static)
                 ht = Text()
-                ht.append("  ⚡ ZER0CODE ", style="bold green")
+                ht.append("  ⚡ ZER0CODE ", style=_st(pal, "primary"))
                 ht.append("│ ", style="dim white")
                 if self.config:
-                    ht.append(f"{self.config.provider}/{self.config.model} ", style="bold cyan")
+                    ht.append(f"{self.config.provider}/{self.config.model} ", style=_st(pal, "accent"))
                 ht.append("│ ", style="dim white")
-                ht.append("OPERATIONAL", style="bold green")
+                ht.append("OPERATIONAL", style=_st(pal, "primary"))
                 header.update(ht)
             except Exception:
                 pass
@@ -933,6 +984,12 @@ def run_tui(agent=None, config=None):
         print("  Install: pip install 'zer0code[tui]' or pip install textual")
         print("  Falling back to REPL mode.\n")
         return False
+    if isinstance(config, dict):
+        theme_name = config.get("theme", "hacker")
+    else:
+        theme_name = getattr(config, "theme", "hacker") or "hacker"
+    pal = tui_palette(theme_name)
+    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, pal)
     app = ZeroCodeTUI(agent=agent, config=config)
     app.run()
     return True

@@ -7,7 +7,7 @@
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
 [![version](https://img.shields.io/badge/version-v0.14.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
-[![tests](https://img.shields.io/badge/tests-56_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
+[![tests](https://img.shields.io/badge/tests-57_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
