@@ -120,3 +120,40 @@ class ReportGenerator:
                 if name:
                     tools.append(name)
         return tools
+
+    # -- SARIF (GitHub Action / CI parity with Pentest-Swarm-AI) ------------
+    def to_sarif(self, messages: list[dict], tool_name: str = "zer0code") -> dict:
+        """Build SARIF 2.1.0 log from session messages. Fails open to empty results."""
+        try:
+            findings = self._extract_findings(messages)
+            rules, results = [], []
+            sev_map = {"critical": "error", "high": "error", "medium": "warning",
+                       "low": "note", "info": "note"}
+            for i, f in enumerate(findings):
+                blob = f.lower()
+                sev = next((s for s in ("critical", "high", "medium", "low") if s in blob), "medium")
+                rid = f"Z0-{i+1:03d}"
+                rules.append({"id": rid, "name": f[:80],
+                              "defaultConfiguration": {"level": sev_map[sev]}})
+                results.append({
+                    "ruleId": rid, "level": sev_map[sev],
+                    "message": {"text": f[:1000]},
+                    "locations": [{"physicalLocation": {
+                        "artifactLocation": {"uri": "target"},
+                        "region": {"startLine": 1}}}],
+                })
+            return {
+                "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+                "version": "2.1.0",
+                "runs": [{"tool": {"driver": {"name": tool_name, "rules": rules}},
+                          "results": results}],
+            }
+        except Exception:
+            return {"version": "2.1.0", "runs": []}
+
+    def write_sarif(self, messages: list[dict], path: str,
+                    tool_name: str = "zer0code") -> str:
+        data = self.to_sarif(messages, tool_name)
+        with open(path, "w") as fh:
+            json.dump(data, fh, indent=2)
+        return path

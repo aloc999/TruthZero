@@ -338,6 +338,34 @@ class ZeroCoreAgent:
             schemas.append(mcp_tool["schema"])
         return schemas
 
+    def _scope_check_tool(self, name: str, arguments: dict, scope) -> str:
+        """Return block reason or ''. Fail closed on scope errors."""
+        NETWORK_TOOLS = {
+            "bash", "port_scan", "subdomain_enum", "nuclei_scan", "dir_fuzz",
+            "tech_detect", "web_fetch", "web_crawl", "http_replay", "dns_lookup",
+            "whois_lookup", "js_analyze", "crawler", "screenshot",
+        }
+        if name not in NETWORK_TOOLS:
+            return ""
+        try:
+            # Direct target-ish args first (fail closed per-arg).
+            for key in ("url", "target", "host", "domain", "hostname"):
+                val = arguments.get(key)
+                if isinstance(val, str) and val.strip():
+                    v = val.strip()
+                    ok = scope.check_url(v) if "://" in v or "/" in v else scope.is_in_scope(v)
+                    if not ok:
+                        return f"Target '{v}' is OUT OF SCOPE"
+            # Fallback: scan full command/args blob for out-of-scope hosts.
+            blob = " ".join(str(v) for v in arguments.values() if isinstance(v, str))
+            if blob:
+                allowed, reason = scope.check_command(blob)
+                if not allowed:
+                    return reason
+            return ""
+        except Exception:
+            return "Scope check failed (fail closed)"
+
     async def execute_tool_call(self, tool_call: Dict[str, Any]) -> ToolResult:
         name = tool_call.get("name", "")
         if name in ("write_file", "edit_file") and "file_path" in str(tool_call.get("arguments", "")):
@@ -374,6 +402,14 @@ class ZeroCoreAgent:
             approved, reason = await self.permissions.check_permission(name, arguments)
             if not approved:
                 return ToolResult(output="", success=False, error=f"Permission denied: {reason}")
+
+        # Scope enforcement — layer 2 (tool layer is layer 1).
+        # Blocks network-capable tools when target is out of scope. Fail closed.
+        scope = getattr(self, "_scope", None)
+        if scope is not None and getattr(scope, "enabled", False):
+            scope_block = self._scope_check_tool(name, arguments, scope)
+            if scope_block:
+                return ToolResult(output="", success=False, error=f"Scope denied: {scope_block}")
 
         if self._on_tool_call:
             try:

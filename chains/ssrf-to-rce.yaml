@@ -1,0 +1,12 @@
+name: ssrf-to-rce
+cve: CVE-2021-21972
+description: SSRF via upload/URL param → internal metadata → RCE
+severity: critical
+fingerprint:
+  - "URL parameter reflected in server-side fetch"
+  - "cloud metadata reachable (169.254.169.254 / metadata.google.internal)"
+verify_steps:
+  - "Replay param with OOB collaborator URL; confirm DNS/HTTP callback"
+  - "Request metadata path read-only; stop before destructive actions"
+  - "Capture request/response as evidence"
+report: "SSRF confirmed with OOB + metadata read; impact = cloud creds → RCE path"

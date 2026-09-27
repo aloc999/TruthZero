@@ -1,0 +1,16 @@
+name: ctf-solver
+description: CTF solver — fast recon, targeted exploit, flag capture
+scope_required: false
+phases:
+  - recon: [port_scan, tech_detect, web_crawl]
+  - classify: [http_replay, response_diff]
+  - exploit: [sqli-chain, ssti-chain, auth-bypass]
+  - report: [debrief]
+steps:
+  - "Port scan + service detect on {target}"
+  - "Web crawl + dir fuzz + param discovery"
+  - "Test injection points (SQLi, SSTI, LFI, upload) with safe probes"
+  - "Escalate confirmed primitives toward flag (no out-of-scope pivot)"
+  - "Write debrief: path, payload, flag, cleanup"
+stop_when:
+  - "flag captured, or budget exhausted"

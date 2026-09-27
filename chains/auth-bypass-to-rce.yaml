@@ -1,0 +1,11 @@
+name: auth-bypass-to-rce
+cve: ""
+description: Auth bypass (force-browse/verb tamper/JWT) → admin function → RCE
+severity: critical
+fingerprint:
+  - "admin endpoint returns 200 without auth, or JWT accepted with alg=none"
+verify_steps:
+  - "Replay admin endpoint without session; compare response diff"
+  - "Try JWT alg=none / kid traversal read-only"
+  - "If code exec sink reachable, prove with harmless id/whoami only"
+report: "Auth bypass → privileged sink; impact = full compromise path"

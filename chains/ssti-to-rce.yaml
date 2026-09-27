@@ -1,0 +1,11 @@
+name: ssti-to-rce
+cve: CVE-2022-22954
+description: Template injection in preview/email/PDF path → RCE
+severity: critical
+fingerprint:
+  - "math eval reflected (e.g. 7*7 → 49) in rendered output"
+verify_steps:
+  - "Probe with {{7*7}} / ${7*7} per engine; confirm eval vs reflection"
+  - "Escalate read-only (config disclose); RCE only via harmless id"
+  - "Capture engine + payload + output"
+report: "SSTI confirmed with engine fingerprint; impact = RCE"

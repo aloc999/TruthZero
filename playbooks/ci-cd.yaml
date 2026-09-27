@@ -1,0 +1,18 @@
+name: ci-cd
+description: CI/CD safe scan — nuclei + secrets + fail on high
+scope_required: true
+phases:
+  - recon: [tech_detect]
+  - classify: [nuclei_scan, secret-scan]
+  - exploit: []
+  - report: [sarif]
+steps:
+  - "Run nuclei (high+critical templates only) on {target}"
+  - "Scan repo + JS bundles for hardcoded secrets"
+  - "JEV-verify every candidate (fail open)"
+  - "Emit SARIF; exit non-zero on high/critical"
+stop_when:
+  - "scan complete"
+ci:
+  fail_on: [high, critical]
+  sarif_out: zer0code-results.sarif

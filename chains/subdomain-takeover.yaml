@@ -1,0 +1,11 @@
+name: subdomain-takeover
+cve: ""
+description: Dangling CNAME → service claim → content/hosting control
+severity: high
+fingerprint:
+  - "CNAME to unclaimed external service (NXDOMAIN / NoSuchBucket / 404 service page)"
+verify_steps:
+  - "DNS confirm CNAME + HTTP confirm service error page"
+  - "Claim check only on authorized test services; never hijack prod"
+  - "Screenshot + DNS records as evidence"
+report: "Takeover candidate with claim proof; impact = phishing/subdomain trust abuse"

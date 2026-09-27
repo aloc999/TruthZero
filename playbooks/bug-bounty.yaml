@@ -1,0 +1,18 @@
+name: bug-bounty
+description: Bug bounty race — breadth first, prove fast, report ready
+scope_required: true
+phases:
+  - recon: [subdomain_enum, port_scan, tech_detect, web_crawl, js_analyze]
+  - classify: [http_replay, response_diff]
+  - exploit: [bola-idor-chain, jwt-forgery, mass-assignment, xss-chain]
+  - report: [bug-bounty-template, sarif]
+steps:
+  - "Enumerate subdomains for {target} (subfinder + crt.sh) and probe alive (httpx)"
+  - "Port scan top-1000 + tech fingerprint on alive hosts"
+  - "Crawl + JS analysis: endpoints, params, secrets, object refs → blackboard"
+  - "Classify: cheap probe per finding, assign severity, drop FPs"
+  - "Exploit top adaptive paths first (BOLA/IDOR, JWT, mass assignment, XSS)"
+  - "Capture evidence per confirmed vuln (request/response/screenshot)"
+  - "Write HackerOne/Bugcrowd-ready report + SARIF"
+stop_when:
+  - "3 confirmed vulns with evidence, or budget exhausted"

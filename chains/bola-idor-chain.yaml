@@ -1,0 +1,11 @@
+name: bola-idor-chain
+cve: ""
+description: Leaked object ref → cross-user access across endpoints
+severity: high
+fingerprint:
+  - "OBJECT_REF on blackboard (id/UUID/email mined from response)"
+verify_steps:
+  - "Replay same endpoint with victim object ID under attacker session"
+  - "Probe same ID across sibling endpoints (emergent, unscripted)"
+  - "Capture before/after response diff as evidence"
+report: "BOLA/IDOR confirmed cross-user read/write; impact per data class"

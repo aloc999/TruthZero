@@ -27,6 +27,49 @@
 
 ZER0CODE is a terminal-based AI coding agent purpose-built for offensive security professionals. It combines the clean CLI experience of Freedom, adaptive learning, and a complete penetration testing toolkit — all in one tool.
 
+## What's New in v0.9.0 — Swarm Edition 🐝
+
+Inspired by [Pentest-Swarm-AI](https://github.com/Armur-Ai/Pentest-Swarm-AI): ZER0CODE is now a **real swarm**, not a pipeline.
+
+- **Stigmergic blackboard + pheromone decay** — agents coordinate via shared findings; `PORT_OPEN` stays hot for hours, `SESSION` for minutes; stale paths decay and die (`zer0code/swarm/`)
+- **4 concurrent specialists** — recon / classify / exploit / report, each with its own trigger predicate; attack chains *emerge* instead of being scripted
+- **Adaptive attack-path scoring** (`--jev-adaptive`) — candidate paths scored against live state, best pursued first, winners reinforced
+- **JEV false-positive filter** (`--jev`) — second-opinion pass, fails open
+- **CVSS v3.1 scoring** — FIRST-spec vectors on every finding
+- **5 playbooks** — `playbooks/{bug-bounty,external-asm,ci-cd,internal-network,ctf-solver}.yaml`
+- **Exploit-chain library** — `chains/*.yaml` (SSRF→RCE, auth-bypass→RCE, BOLA/IDOR, SSTI→RCE, takeover)
+- **New providers** — Together AI (GLM/Qwen/DeepSeek first-class), Gemini, LM Studio, OrcaRouter
+- **New CLI** — `scan --swarm`, `playbook`, `demo`, `install-tools`, `doctor`, `mcp serve`, `serve` (dashboard stub :7777)
+- **SARIF export** — CI-ready `zer0code-results.sarif`
+- **Scope defence in depth** — tool layer + executor layer, fail closed; **cleanup registry** (SIGINT/crash/budget)
+
+```bash
+zer0code scan target.com --scope target.com --swarm          # scriptable swarm
+zer0code scan --lab --lab-target crapi --swarm               # bundled vuln lab
+zer0code playbook run bug-bounty --target target.com
+zer0code demo                                                # offline campaign demo
+```
+
+See [ROADMAP.md](ROADMAP.md) for Wave 2/3 and [SECURITY.md](SECURITY.md) for scope safety.
+
+### ZER0CODE vs Pentest-Swarm-AI
+
+| | ZER0CODE v0.9 | Pentest-Swarm-AI |
+|---|---|---|
+| Open / self-host | ✅ MIT, Python | ✅ AGPL, Go |
+| Architecture | Stigmergic blackboard (ported) | Stigmergic blackboard (original) |
+| Executes vs suggests | Executes | Executes |
+| Memory | Hermes TF-IDF + episodic + strategies | pgvector + pheromones |
+| Tools | 30+ (bash/git/recon/nuclei/exploit/crypto) + PD toolchain wrapper | 8 ProjectDiscovery + nmap |
+| Attack-path scoring | Adaptive (graded pheromone) | JEV adaptive |
+| FP filter | JEV-style, fails open | JEV, fails open |
+| Playbooks | 5 YAML | 5 YAML |
+| Exploit chains | YAML library, CVE-tied | Named CVE-tied chains |
+| Providers | OpenAI/Anthropic/DeepSeek/Together/Gemini/Ollama/LMStudio/OrcaRouter | Claude/Together/Gemini/OrcaRouter/Ollama/LMStudio |
+| Labs / demo | lab flag + demo (stub spin-up) | bundled labs + demo GIF |
+| Dashboard | alpha stub | alpha |
+| MCP | client + serve stub | server beta + Burp planned |
+
 ## What's New in v0.3.0
 
 **24 new features added:**

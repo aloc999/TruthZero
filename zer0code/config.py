@@ -46,6 +46,14 @@ class ZeroCodeConfig:
     api_server_port: int = 3117
     plugins_enabled: bool = True
     max_turns: int = 25
+    # Swarm + verification (Pentest-Swarm-AI parity)
+    strict_llm: bool = False       # promote LLM errors to fatal
+    prompt_cache: bool = True      # Claude prompt caching for recon+classifier
+    jev_enabled: bool = False      # second-opinion FP filter (fails open)
+    jev_adaptive: bool = False     # adaptive attack-path scoring (fails open)
+    swarm_rounds: int = 6
+    swarm_concurrent: int = 4
+    orchestrator_base_url: str = ""
 
     @property
     def api_key(self) -> Optional[str]:
@@ -55,6 +63,10 @@ class ZeroCodeConfig:
             return os.environ.get("ANTHROPIC_API_KEY")
         elif self.provider == "deepseek":
             return os.environ.get("DEEPSEEK_API_KEY")
+        elif self.provider in ("together", "gemini", "orcarouter", "lmstudio"):
+            return os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY",
+                   os.environ.get("TOGETHER_API_KEY",
+                   os.environ.get("GEMINI_API_KEY", "")))
         return None
 
     @classmethod
@@ -111,6 +123,20 @@ class ZeroCodeConfig:
         elif self.provider == "ollama":
             base["base_url"] = self.ollama_base_url
             base["api_key"] = "ollama"
+        elif self.provider == "together":
+            base["api_key"] = os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY",
+                              os.environ.get("TOGETHER_API_KEY", ""))
+            base["base_url"] = self.orchestrator_base_url or "https://api.together.xyz/v1"
+        elif self.provider == "gemini":
+            base["api_key"] = os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY",
+                              os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", "")))
+            base["base_url"] = self.orchestrator_base_url or "https://generativelanguage.googleapis.com/v1beta/openai"
+        elif self.provider == "lmstudio":
+            base["api_key"] = "lm-studio"
+            base["base_url"] = self.orchestrator_base_url or "http://localhost:1234/v1"
+        elif self.provider == "orcarouter":
+            base["api_key"] = os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY", "")
+            base["base_url"] = self.orchestrator_base_url or "https://api.orcarouter.ai/v1"
 
         if self.security_tools.use_proxy:
             base["proxy"] = f"http://{self.security_tools.proxy_host}:{self.security_tools.proxy_port}"

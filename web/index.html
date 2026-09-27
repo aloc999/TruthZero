@@ -1,0 +1,11 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZER0CODE Swarm Dashboard (alpha)</title>
+<style>body{background:#0a0e14;color:#c9d1d9;font-family:monospace;padding:24px}
+.card{border:1px solid #1f6feb33;border-radius:8px;padding:16px;margin:12px 0}
+.hot{color:#3fb950}.sev-high{color:#f85149}.sev-medium{color:#d29922}</style></head>
+<body><h1>⚡ ZER0CODE Swarm Dashboard <small>(alpha — wiring to live campaigns in progress)</small></h1>
+<div class="card">API: <code>POST /api/scan {target, scope}</code> · <code>GET /api/findings</code> · SARIF at <code>/api/sarif</code></div>
+<div class="card" id="board">Blackboard: polling <code>/api/findings</code>…</div>
+<script>setInterval(async()=>{try{const r=await fetch('/api/findings');const j=await r.json();
+document.getElementById('board').textContent='Findings: '+JSON.stringify(j).slice(0,500)}catch(e){}},3000)</script>
+</body></html>

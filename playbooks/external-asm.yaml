@@ -1,0 +1,17 @@
+name: external-asm
+description: External attack-surface management — continuous map + diff
+scope_required: true
+phases:
+  - recon: [subdomain_enum, port_scan, tech_detect, takeover-check]
+  - classify: [http_replay]
+  - exploit: [subdomain-takeover]
+  - report: [technical-template, sarif]
+steps:
+  - "Enumerate subdomains for {target} from all sources"
+  - "Resolve DNS (CNAME/A) per subdomain, flag dangling external services"
+  - "Probe alive hosts + tech fingerprint + screenshot landing pages"
+  - "Diff vs previous ASM snapshot; new assets go hot on blackboard"
+  - "Verify takeover candidates only (safe claim check, no destruction)"
+  - "Write ASM delta report"
+stop_when:
+  - "full scope mapped, or budget exhausted"

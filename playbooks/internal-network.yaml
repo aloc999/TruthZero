@@ -1,0 +1,18 @@
+name: internal-network
+description: Internal network sweep — discovery, safe checks only
+scope_required: true
+phases:
+  - recon: [port_scan, service-detect]
+  - classify: [http_replay]
+  - exploit: [auth-bypass-safe]
+  - report: [technical-template]
+steps:
+  - "Host discovery on {target} range (ping/arp, scope-locked)"
+  - "Port scan top-1000 + service/version detect"
+  - "Check default creds + anonymous access (read-only, no brute force)"
+  - "Check SMB/LDAP/RDP exposure per scope rules"
+  - "Write internal findings report"
+stop_when:
+  - "range covered, or budget exhausted"
+safety:
+  - "no brute force, no DoS, no destructive payloads"
