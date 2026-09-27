@@ -200,7 +200,10 @@ Full policy: [SECURITY.md](SECURITY.md).
 **Install**
 
 ```bash
-pipx install truthzero
+curl -fsSL https://raw.githubusercontent.com/aloc999/TruthZero/main/install.sh | sh
+# or: brew install aloc999/tap/truthzero
+# or: pipx install truthzero          # from PyPI, after first release
+# or: uv tool install git+https://github.com/aloc999/TruthZero.git
 # or from source:
 git clone https://github.com/aloc999/TruthZero.git && cd TruthZero && pipx install -e .
 ```
