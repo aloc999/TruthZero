@@ -1,12 +1,12 @@
 import asyncio
 
-from zer0code.swarm import (
+from truthzero.swarm import (
     Blackboard, SwarmScheduler, plan_heal, should_retry, mine,
     auth_holder_spec, param_fuzzer_spec, chain_builder_spec, maybe_spawn,
 )
-from zer0code.memory.guard import MemoryGuard
-from zer0code.bench import run_offline, score_campaign
-from zer0code.lab import LabManager, LABS
+from truthzero.memory.guard import MemoryGuard
+from truthzero.bench import run_offline, score_campaign
+from truthzero.lab import LabManager, LABS
 
 
 def test_selfheal_rules():
@@ -84,7 +84,7 @@ def test_bench_offline():
 
 
 def test_bench_mini_suite():
-    from zer0code.bench import run_suite
+    from truthzero.bench import run_suite
     res = run_suite("mini")
     assert res["total"] == 5
     assert res["passed"] == res["total"], res["tasks"]

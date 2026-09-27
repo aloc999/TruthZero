@@ -3,8 +3,8 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from zer0code.scoring import JevFilter
-from zer0code.scoring.jev_external import ExternalJevBackend
+from truthzero.scoring import JevFilter
+from truthzero.scoring.jev_external import ExternalJevBackend
 
 
 class _StubHandler(BaseHTTPRequestHandler):
@@ -86,7 +86,7 @@ class _FakeBackend:
 
 
 def test_and_gate():
-    from zer0code.scoring.jev_external import ExternalVerdict
+    from truthzero.scoring.jev_external import ExternalVerdict
     hedge = ("may be possibly theoretical unable to confirm", "", "high")
     # both drop → drop
     j = JevFilter(enabled=True, _external=_FakeBackend(ExternalVerdict(False, 0.2, {})))

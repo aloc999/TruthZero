@@ -3,8 +3,8 @@ import http.client
 import json
 import urllib.parse
 
-from zer0code.dashboard import DashboardServer
-from zer0code.headless import run_headless_scan
+from truthzero.dashboard import DashboardServer
+from truthzero.headless import run_headless_scan
 
 
 def _post(port, path, data):
@@ -27,7 +27,7 @@ def _get(port, path):
 
 
 def test_headless_scan_and_persist(tmp_path, monkeypatch):
-    import zer0code.headless as h
+    import truthzero.headless as h
     monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
     result, board_file = asyncio.run(
         run_headless_scan("example.com", scope="example.com", rounds=2))
@@ -76,7 +76,7 @@ def test_headless_on_event():
 
 def test_scan_strict_exit_code():
     from click.testing import CliRunner
-    from zer0code.cli import cli
+    from truthzero.cli import cli
     r = CliRunner().invoke(
         cli, ["scan", "evil.com", "--scope", "example.com", "--strict"])
     assert r.exit_code == 1
@@ -126,7 +126,7 @@ def test_dashboard_api():
 
         # index
         code, body = _get(port, "/")
-        assert code == 200 and ("ZER0CODE" in body or "swarm" in body.lower())
+        assert code == 200 and ("TRUTHZERO" in body or "swarm" in body.lower())
         assert "topology" in body.lower() or "topo" in body
         assert "cyberpunk" in body.lower() or "00f0ff" in body
 

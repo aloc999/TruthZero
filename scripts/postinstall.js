@@ -21,11 +21,11 @@ const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 
 function log(msg) {
-  console.log(`${GREEN}[zer0code]${RESET} ${msg}`);
+  console.log(`${GREEN}[truthzero]${RESET} ${msg}`);
 }
 
 function err(msg) {
-  console.error(`${RED}[zer0code]${RESET} ${msg}`);
+  console.error(`${RED}[truthzero]${RESET} ${msg}`);
 }
 
 function findPython() {
@@ -69,7 +69,7 @@ function createVenv(pythonCmd) {
 }
 
 function installPackage() {
-  log("Installing ZER0CODE and dependencies...");
+  log("Installing TRUTHZERO and dependencies...");
   try {
     execSync(`"${PIP_BIN}" install --upgrade pip`, {
       stdio: "pipe",
@@ -96,7 +96,7 @@ function installPackage() {
 
 function verifyInstall() {
   try {
-    const result = execSync(`"${PYTHON_BIN}" -c "from zer0code import __version__; print(__version__)"`, {
+    const result = execSync(`"${PYTHON_BIN}" -c "from truthzero import __version__; print(__version__)"`, {
       encoding: "utf-8",
       timeout: 15000,
     }).trim();
@@ -109,7 +109,7 @@ function verifyInstall() {
 function makeBinExecutable() {
   if (!IS_WIN) {
     try {
-      fs.chmodSync(path.join(ROOT, "bin", "zer0code"), 0o755);
+      fs.chmodSync(path.join(ROOT, "bin", "truthzero"), 0o755);
     } catch (_) {}
   }
 }
@@ -122,7 +122,7 @@ function main() {
   console.log(`${GREEN}${BOLD}  / /_| |_| | | |_| | |__| |_| | |_| | |___${RESET}`);
   console.log(`${GREEN}${BOLD} /____|___|_|  \\___/ \\____\\___/|____/|_____|${RESET}`);
   console.log("");
-  log("Installing ZER0CODE...");
+  log("Installing TRUTHZERO...");
   console.log("");
 
   const pythonCmd = findPython();
@@ -151,7 +151,7 @@ function main() {
   }
 
   if (!installPackage()) {
-    err("Failed to install ZER0CODE.");
+    err("Failed to install TRUTHZERO.");
     err("Try manual installation:");
     err(`  cd ${ROOT}`);
     err(`  ${pythonCmd} -m venv .venv`);
@@ -162,20 +162,20 @@ function main() {
   const version = verifyInstall();
   if (!version) {
     err("Installation completed but verification failed.");
-    err("Try running: zer0code version");
+    err("Try running: truthzero version");
     process.exit(1);
   }
 
   makeBinExecutable();
 
   console.log("");
-  log(`${BOLD}ZER0CODE v${version} installed successfully!${RESET}`);
+  log(`${BOLD}TRUTHZERO v${version} installed successfully!${RESET}`);
   console.log("");
   log(`${CYAN}Quick start:${RESET}`);
   log(`  export OPENAI_API_KEY="sk-..."     ${DIM}# or ANTHROPIC_API_KEY or DEEPSEEK_API_KEY${RESET}`);
-  log(`  zer0code                            ${DIM}# start interactive session${RESET}`);
-  log(`  zer0code -p deepseek -m deepseek-v4-pro  ${DIM}# use DeepSeek${RESET}`);
-  log(`  zer0code run "scan target.com"      ${DIM}# single command${RESET}`);
+  log(`  truthzero                            ${DIM}# start interactive session${RESET}`);
+  log(`  truthzero -p deepseek -m deepseek-v4-pro  ${DIM}# use DeepSeek${RESET}`);
+  log(`  truthzero run "scan target.com"      ${DIM}# single command${RESET}`);
   console.log("");
 }
 

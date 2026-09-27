@@ -1,8 +1,8 @@
 import asyncio
 
-from zer0code.swarm import Blackboard, SwarmScheduler
-from zer0code.scoring import cvss31_score, JevFilter, AdaptiveScorer
-from zer0code import playbooks as pb
+from truthzero.swarm import Blackboard, SwarmScheduler
+from truthzero.scoring import cvss31_score, JevFilter, AdaptiveScorer
+from truthzero import playbooks as pb
 
 
 def test_blackboard_pheromone_decay():
@@ -97,12 +97,12 @@ def test_playbooks_chains_load():
 
 
 def test_scope_enforcement_in_agent():
-    from zer0code.agent import ZeroCoreAgent
-    from zer0code.config import ZeroCodeConfig
-    from zer0code.scope import ScopeManager
+    from truthzero.agent import TruthCoreAgent
+    from truthzero.config import TruthZeroConfig
+    from truthzero.scope import ScopeManager
     import json
-    cfg = ZeroCodeConfig(provider="ollama", model="x")
-    agent = ZeroCoreAgent(cfg)
+    cfg = TruthZeroConfig(provider="ollama", model="x")
+    agent = TruthCoreAgent(cfg)
     sm = ScopeManager()
     sm.add_in_scope("allowed.com")
     agent._scope = sm
@@ -116,7 +116,7 @@ def test_scope_enforcement_in_agent():
 
 
 def test_sarif_export():
-    from zer0code.reports import ReportGenerator
+    from truthzero.reports import ReportGenerator
     g = ReportGenerator()
     msgs = [{"role": "assistant",
              "content": "Found critical SQL injection vulnerability with poc curl proof"}]

@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="banner/hero.svg" alt="ZER0CODE — hack the planet at machine speed" width="100%">
+<img src="banner/hero.svg" alt="TRUTHZERO — hack the planet at machine speed" width="100%">
 
 ### ⚡ HACK THE PLANET AT MACHINE SPEED ⚡
 
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
-[![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
-[![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
+[![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/TRUTHZERO)
+[![tests](https://img.shields.io/badge/tests-59_passing-00f0ff.svg)](https://github.com/aloc999/TRUTHZERO)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-05ffa1.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
@@ -16,7 +16,7 @@
 
 ---
 
-Night City has a new predator. **ZER0CODE** is a terminal-native AI swarm that doesn't just scan your attack surface — it *exploits* it, chains the wreckage, and hands you evidence-backed reports. One agent is a tool. **A swarm is a platform.**
+Night City has a new predator. **TRUTHZERO** is a terminal-native AI swarm that doesn't just scan your attack surface — it *exploits* it, chains the wreckage, and hands you evidence-backed reports. One agent is a tool. **A swarm is a platform.**
 
 While the corps rent you a single caged agent on their cloud, we shipped the whole swarm to your box. Python-forged, MIT-licensed, running on **your** hardware with **your** model — from Claude to a fully air-gapped Ollama rig in the Sprawl.
 
@@ -31,21 +31,21 @@ Three street laws power the swarm (not a pipeline):
 ```
 
 ```bash
-pipx install zer0code                   # dari PyPI (setelah rilis)
+pipx install truthzero                   # dari PyPI (setelah rilis)
 # atau langsung dari GitHub:
-pipx install git+https://github.com/aloc999/ZER0CODE.git
+pipx install git+https://github.com/aloc999/TRUTHZERO.git
 export ANTHROPIC_API_KEY="sk-ant-..."     # or Together/Gemini/Ollama…
 
-zer0code lab up crapi                     # spin up a legal vuln target (:8888)
-zer0code scan 127.0.0.1 --scope 127.0.0.1 --swarm
+truthzero lab up crapi                     # spin up a legal vuln target (:8888)
+truthzero scan 127.0.0.1 --scope 127.0.0.1 --swarm
 # → recon → classify → exploit → report, live on your terminal
 ```
 
 No key, no cloud, no bill? Run the offline demo instead:
 
 ```bash
-zer0code demo                              # full campaign, zero network
-zer0code bench --suite mini                # score the pipeline: 5/5 expected
+truthzero demo                              # full campaign, zero network
+truthzero bench --suite mini                # score the pipeline: 5/5 expected
 ```
 
 ```
@@ -54,28 +54,28 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 
 | System | Status | Wire |
 |---|---|---|
-| Stigmergic blackboard + pheromone decay | **stable** | `zer0code/swarm/blackboard.py` |
-| 4 concurrent specialists (recon/classify/exploit/report) | **stable** | `zer0code/swarm/agents.py` |
-| On-demand specialists (auth-holder/param-fuzzer/chain-builder) | **beta** | `zer0code/swarm/specialists.py` |
-| Response miner (URLs/params/emails/UUIDs/secrets → board) | **beta** | `zer0code/swarm/miner.py` |
-| Self-healing requests (401/403/415/429/5xx mutations) | **beta** | `zer0code/swarm/selfheal.py` |
-| Adaptive attack-path scoring (`--jev-adaptive`) | **beta** | `zer0code/scoring/adaptive.py` |
+| Stigmergic blackboard + pheromone decay | **stable** | `truthzero/swarm/blackboard.py` |
+| 4 concurrent specialists (recon/classify/exploit/report) | **stable** | `truthzero/swarm/agents.py` |
+| On-demand specialists (auth-holder/param-fuzzer/chain-builder) | **beta** | `truthzero/swarm/specialists.py` |
+| Response miner (URLs/params/emails/UUIDs/secrets → board) | **beta** | `truthzero/swarm/miner.py` |
+| Self-healing requests (401/403/415/429/5xx mutations) | **beta** | `truthzero/swarm/selfheal.py` |
+| Adaptive attack-path scoring (`--jev-adaptive`) | **beta** | `truthzero/scoring/adaptive.py` |
 | JEV false-positive filter (builtin + optional TypeSafe second layer, AND-gated, fails open) | **beta** | `--jev`, `TYPESAFE_API_KEY` |
-| CVSS v3.1 FIRST-spec scoring | **stable** | `zer0code/scoring/cvss.py` |
+| CVSS v3.1 FIRST-spec scoring | **stable** | `truthzero/scoring/cvss.py` |
 | Scope defence in depth (tool + executor, fail closed) | **stable** | `agent.py` + `scope.py` |
-| Cleanup registry (SIGINT/crash/budget, reverse-order) | **stable** | `zer0code/cleanup.py` |
-| Hermes memory + poisoning guard | **stable** | `zer0code/memory/` |
-| ProjectDiscovery toolchain wrapper | **beta** | `zer0code/swarm/toolchain.py` |
-| Burp bridge (history/Repeater/scope via REST :1337) | **beta** | `zer0code/tools/burp_bridge.py` |
-| sqlmap / Metasploit / ZAP adapters (safe defaults only) | **beta** | `zer0code/tools/` |
-| MCP stdio server (9 tools, Claude/Cursor-ready) | **beta** | `zer0code mcp serve` |
-| SARIF export + CI gate (exit 2 on fail) | **stable** | `zer0code gate` |
-| Postgres board + pgvector similarity | **beta** | `zer0code/swarm/pgboard.py` |
-| Docker vuln labs (crapi/juice/vampi/dvga) | **beta** | `zer0code lab` |
+| Cleanup registry (SIGINT/crash/budget, reverse-order) | **stable** | `truthzero/cleanup.py` |
+| Hermes memory + poisoning guard | **stable** | `truthzero/memory/` |
+| ProjectDiscovery toolchain wrapper | **beta** | `truthzero/swarm/toolchain.py` |
+| Burp bridge (history/Repeater/scope via REST :1337) | **beta** | `truthzero/tools/burp_bridge.py` |
+| sqlmap / Metasploit / ZAP adapters (safe defaults only) | **beta** | `truthzero/tools/` |
+| MCP stdio server (9 tools, Claude/Cursor-ready) | **beta** | `truthzero mcp serve` |
+| SARIF export + CI gate (exit 2 on fail) | **stable** | `truthzero gate` |
+| Postgres board + pgvector similarity | **beta** | `truthzero/swarm/pgboard.py` |
+| Docker vuln labs (crapi/juice/vampi/dvga) | **beta** | `truthzero lab` |
 | VS Code extension / GitHub Action | **beta** | `deploy/` |
-| Live dashboard + HTTP API (`/api/findings`, `/api/sarif`, `POST /api/scan`) | **beta** | `zer0code serve --port 7777` |
+| Live dashboard + HTTP API (`/api/findings`, `/api/sarif`, `POST /api/scan`) | **beta** | `truthzero serve --port 7777` |
 
-<img src="banner/dashboard.png" alt="ZER0CODE neon-grid dashboard: swarm topology, severity bars, scan console" width="100%">
+<img src="banner/dashboard.png" alt="TRUTHZERO neon-grid dashboard: swarm topology, severity bars, scan console" width="100%">
 
 ```
 // ═══════════════════ HOW THE SWARM HUNTS ═══════════════════
@@ -106,7 +106,7 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 
 **Swarm vs pipeline:** a pipeline walks recon → classify → exploit → report in a fixed line and can't fold mid-run discoveries back into recon. The swarm chews the whole surface concurrently, reacts to every new finding, and lets stale paths die. Breadth at machine speed — every finding proven with captured evidence.
 
-### ZER0CODE spec sheet
+### TRUTHZERO spec sheet
 
 | Capability | What you get |
 |---|---|
@@ -145,11 +145,11 @@ Destructive flags (`--os-shell`, non-allowlist msf modules, out-of-scope targets
 // RUNBOOKS — playbooks + chains (`playbooks/`, `chains/`, `benchmarks/`)
 
 ```bash
-zer0code playbook list                    # bug-bounty, external-asm, ci-cd, internal-network, ctf-solver
-zer0code playbook run bug-bounty --target shop.t
-zer0code playbook chains                  # ssrf-to-rce, auth-bypass-to-rce, bola-idor-chain, ssti-to-rce, takeover
-zer0code asm diff old.json new.json       # ASM delta: new assets go hot on the board
-zer0code serve --port 7777                # live dashboard + API (findings/SARIF/scan)
+truthzero playbook list                    # bug-bounty, external-asm, ci-cd, internal-network, ctf-solver
+truthzero playbook run bug-bounty --target shop.t
+truthzero playbook chains                  # ssrf-to-rce, auth-bypass-to-rce, bola-idor-chain, ssti-to-rce, takeover
+truthzero asm diff old.json new.json       # ASM delta: new assets go hot on the board
+truthzero serve --port 7777                # live dashboard + API (findings/SARIF/scan)
 ```
 
 ```
@@ -161,12 +161,12 @@ We're the harness, not the model. One key drives the whole swarm:
 | Provider | Flag | Setup |
 |---|---|---|
 | Claude (default) | `claude` | `ANTHROPIC_API_KEY` |
-| Together AI (GLM/Qwen/DeepSeek) | `together` | `PENTESTSWARM_ORCHESTRATOR_API_KEY` |
+| Together AI (GLM/Qwen/DeepSeek) | `together` | `TRUTHZERO_ORCHESTRATOR_API_KEY` |
 | OpenAI-compatible | `openai` | key + vendor `/v1` URL |
 | Gemini | `gemini` | `GEMINI_API_KEY` |
 | DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` |
 | GLM (Zhipu Z.AI direct) | `glm` | `ZHIPU_API_KEY` (Coding Plan: base-url override) |
-| OrcaRouter | `orcarouter` | `PENTESTSWARM_ORCHESTRATOR_API_KEY` |
+| OrcaRouter | `orcarouter` | `TRUTHZERO_ORCHESTRATOR_API_KEY` |
 | Ollama (100% local) | `ollama` | pull a model, no key |
 | LM Studio (100% local) | `lmstudio` | load model, enable server |
 
@@ -188,7 +188,7 @@ Official suites stay on the roadmap — the harness is ready, the envs are not y
 Defence in depth, fail closed: **(1)** toolchain pre-checks scope, **(2)** `execute_tool_call` re-checks every network tool, **(3)** scheduler refuses out-of-scope targets at round 0. Teardown hooks register *before* execution — SIGINT, crash, or dead budget all clean up in reverse order.
 
 ```bash
-zer0code scan shop.t --scope shop.t --swarm   # scope enforced 3×
+truthzero scan shop.t --scope shop.t --swarm   # scope enforced 3×
 ```
 
 Full policy: [SECURITY.md](SECURITY.md).
@@ -200,9 +200,9 @@ Full policy: [SECURITY.md](SECURITY.md).
 **Install**
 
 ```bash
-pipx install zer0code
+pipx install truthzero
 # or from source:
-git clone https://github.com/aloc999/ZER0CODE.git && cd ZER0CODE && pipx install -e .
+git clone https://github.com/aloc999/TRUTHZERO.git && cd TRUTHZERO && pipx install -e .
 ```
 
 Requirements: Python 3.10+. Full chrome optionally: `apt install subfinder nmap nuclei ffuf sqlmap metasploit-framework`, `docker` for labs, Burp + REST API extension for the bridge, Postgres 16 + pgvector for the memory board.
@@ -210,19 +210,19 @@ Requirements: Python 3.10+. Full chrome optionally: `apt install subfinder nmap 
 **Daily use**
 
 ```bash
-zer0code                                 # interactive session
-zer0code -p together -m zai-org/GLM-5.3  # ride a cyber-bench leader
-zer0code run "map the API surface of shop.t"
-zer0code scan shop.t --scope shop.t --swarm --jev-adaptive
+truthzero                                 # interactive session
+truthzero -p together -m zai-org/GLM-5.3  # ride a cyber-bench leader
+truthzero run "map the API surface of shop.t"
+truthzero scan shop.t --scope shop.t --swarm --jev-adaptive
 # flags: --no-swarm (sequential pass), --jev (FP sweep), --strict (exit 1 on failure)
-zer0code sessions / memory / doctor / install-tools
+truthzero sessions / memory / doctor / install-tools
 ```
 
 **Interactive slash commands** — `/help /tools /clear /memory /config /model /provider /theme /skill /session /compact /cost /status /persona /template /proxy /branch /export /undo /plugin /serve /budget /creds /lsp /scope /workflow /exit` (tab-completion built in).
 
-**Config** (`~/.zer0code/config.json`) — provider, model, theme (`hacker`/`dark`/`minimal`/`cyberpunk`, switch live with `/theme cyberpunk`), `strict_llm`, `prompt_cache`, `jev_enabled`, `jev_adaptive`, `swarm_rounds`, `swarm_concurrent`, token budget, proxy, MCP servers, wordlists. Invalid keys fail validation on load.
+**Config** (`~/.truthzero/config.json`) — provider, model, theme (`hacker`/`dark`/`minimal`/`cyberpunk`, switch live with `/theme cyberpunk`), `strict_llm`, `prompt_cache`, `jev_enabled`, `jev_adaptive`, `swarm_rounds`, `swarm_concurrent`, token budget, proxy, MCP servers, wordlists. Invalid keys fail validation on load.
 
-**Cortex details** — Hermes memory (TF-IDF + episodic + strategies + decay + auto-reflection + poison guard), risk-tiered permissions (low auto / medium contextual / high confirm; `rm -rf`-class patterns always confirm), SQLite sessions (`--resume`), project context files (`.zer0code.md`, `AGENTS.md`, `CLAUDE.md`…), 15 pentest skills, 15 prompt templates, file rollback, conversation branching, desktop notifications, LSP diagnostics, full-screen TUI (`zer0code tui`: 4 neon themes live via `/theme` or Ctrl+T, `/scan` hunts with live NOW/counters panel + `/lab` + `/bench` in-app, model/provider pickers via `/model` `/provider` or Ctrl+O, Esc closes panel/picker, compact 3-row chat box), HTTP API on `:3117`.
+**Cortex details** — Hermes memory (TF-IDF + episodic + strategies + decay + auto-reflection + poison guard), risk-tiered permissions (low auto / medium contextual / high confirm; `rm -rf`-class patterns always confirm), SQLite sessions (`--resume`), project context files (`.truthzero.md`, `AGENTS.md`, `CLAUDE.md`…), 15 pentest skills, 15 prompt templates, file rollback, conversation branching, desktop notifications, LSP diagnostics, full-screen TUI (`truthzero tui`: 4 neon themes live via `/theme` or Ctrl+T, `/scan` hunts with live NOW/counters panel + `/lab` + `/bench` in-app, model/provider pickers via `/model` `/provider` or Ctrl+O, Esc closes panel/picker, compact 3-row chat box), HTTP API on `:3117`.
 
 **Architecture** — `agent.py` (loop) · `swarm/` (board/agents/scheduler/miner/selfheal/specialists/toolchain/pgboard) · `scoring/` (cvss/jev/adaptive) · `tools/` (35+) · `memory/` · `providers/` (8) · `mcp/` (client + stdio server) · `cli.py` · `lab.py` · `bench.py` · `asm.py` · `playbooks/`+`chains/`+`benchmarks/` · `deploy/` (vscode + github-action) · `web/`.
 
@@ -261,6 +261,6 @@ MIT — see [LICENSE](LICENSE).
 
 *"In the sprawl of zeros and ones, we are the zero that makes everything possible."*
 
-`▓ NIGHT CITY GRID // ZER0CODE v0.15 // STAY CHROME ▓`
+`▓ NIGHT CITY GRID // TRUTHZERO v0.15 // STAY CHROME ▓`
 
 </div>

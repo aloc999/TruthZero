@@ -15,4 +15,4 @@ stop_when:
   - "scan complete"
 ci:
   fail_on: [high, critical]
-  sarif_out: zer0code-results.sarif
+  sarif_out: truthzero-results.sarif

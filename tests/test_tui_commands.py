@@ -3,7 +3,7 @@ import pytest
 
 textual = pytest.importorskip("textual")
 
-from zer0code.tui_app import ZeroCodeTUI, SLASH_COMMANDS
+from truthzero.tui_app import TruthZeroTUI, SLASH_COMMANDS
 
 
 class FakeConv:
@@ -28,7 +28,7 @@ def _app():
     from types import SimpleNamespace
     cfg = SimpleNamespace(provider="openai", model="gpt-4o", theme="hacker",
                           memory_enabled=False)
-    return ZeroCodeTUI(agent=None, config=cfg)
+    return TruthZeroTUI(agent=None, config=cfg)
 
 
 @pytest.mark.asyncio
@@ -57,7 +57,7 @@ async def test_branch_no_agent_silent():
 
 @pytest.mark.asyncio
 async def test_scan_lab_bench(tmp_path, monkeypatch):
-    import zer0code.headless as h
+    import truthzero.headless as h
     monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
     app, conv = _app(), FakeConv()
     await app._handle_slash("/scan example.com --scope example.com --rounds 1", conv)
@@ -110,7 +110,7 @@ async def test_provider_invalid_lists_all():
 @pytest.mark.asyncio
 async def test_mounted_theme_and_provider():
     """Mounted paths: /theme cycles live, /provider valid switches."""
-    from zer0code.tui_app import build_tui_css, tui_palette
+    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
 
     class Cfg(SimpleNamespace):
@@ -119,8 +119,8 @@ async def test_mounted_theme_and_provider():
 
     cfg = Cfg(provider="openai", model="m", theme="hacker", memory_enabled=False)
     pal = tui_palette("hacker")
-    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, pal)
-    app = ZeroCodeTUI(agent=None, config=cfg)
+    TruthZeroTUI.CSS = build_tui_css(TruthZeroTUI._CSS_TEMPLATE, pal)
+    app = TruthZeroTUI(agent=None, config=cfg)
     async with app.run_test(size=(100, 30)) as pilot:
         for cmd in ["/theme cyberpunk", "/provider together"]:
             for ch in cmd:
@@ -135,7 +135,7 @@ async def test_mounted_theme_and_provider():
 
 @pytest.mark.asyncio
 async def test_model_picker_select_and_cancel():
-    from zer0code.tui_app import (
+    from truthzero.tui_app import (
         build_tui_css, tui_palette, PickerScreen,
     )
     from types import SimpleNamespace
@@ -146,9 +146,9 @@ async def test_model_picker_select_and_cancel():
 
     cfg = Cfg(provider="openai", model="gpt-4o", theme="cyberpunk",
               memory_enabled=False)
-    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+    TruthZeroTUI.CSS = build_tui_css(TruthZeroTUI._CSS_TEMPLATE,
                                     tui_palette("cyberpunk"))
-    app = ZeroCodeTUI(agent=None, config=cfg)
+    app = TruthZeroTUI(agent=None, config=cfg)
     async with app.run_test(size=(100, 32)) as pilot:
         for ch in "/model":
             await pilot.press(ch)
@@ -186,14 +186,14 @@ async def test_scan_out_of_scope_clean():
 
 @pytest.mark.asyncio
 async def test_escape_closes_panel_and_refocuses():
-    from zer0code.tui_app import build_tui_css, tui_palette
+    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)
-    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+    TruthZeroTUI.CSS = build_tui_css(TruthZeroTUI._CSS_TEMPLATE,
                                     tui_palette("hacker"))
-    app = ZeroCodeTUI(agent=None, config=cfg)
+    app = TruthZeroTUI(agent=None, config=cfg)
     async with app.run_test(size=(100, 30)) as pilot:
         await pilot.press("ctrl+b")  # open side panel
         await pilot.pause(0.3)
@@ -209,17 +209,17 @@ async def test_escape_closes_panel_and_refocuses():
 
 @pytest.mark.asyncio
 async def test_rerun_and_telemetry(tmp_path, monkeypatch):
-    import zer0code.headless as h
+    import truthzero.headless as h
     monkeypatch.setattr(h, "BOARDS_DIR", tmp_path)
-    from zer0code.tui_app import build_tui_css, tui_palette
+    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
     from textual.widgets import RichLog
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)
-    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+    TruthZeroTUI.CSS = build_tui_css(TruthZeroTUI._CSS_TEMPLATE,
                                     tui_palette("hacker"))
-    app = ZeroCodeTUI(agent=None, config=cfg)
+    app = TruthZeroTUI(agent=None, config=cfg)
     async with app.run_test(size=(110, 34)) as pilot:
         for ch in "/scan example.com --scope example.com --rounds 1":
             await pilot.press(ch)
@@ -238,15 +238,15 @@ async def test_rerun_and_telemetry(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_welcome_buttons_and_hide():
-    from zer0code.tui_app import build_tui_css, tui_palette
+    from truthzero.tui_app import build_tui_css, tui_palette
     from types import SimpleNamespace
     from textual.widgets import Input
 
     cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
                           memory_enabled=False)
-    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+    TruthZeroTUI.CSS = build_tui_css(TruthZeroTUI._CSS_TEMPLATE,
                                     tui_palette("hacker"))
-    app = ZeroCodeTUI(agent=None, config=cfg)
+    app = TruthZeroTUI(agent=None, config=cfg)
     async with app.run_test(size=(110, 32)) as pilot:
         await pilot.pause(0.5)
         welcome = app.query_one("#welcome")

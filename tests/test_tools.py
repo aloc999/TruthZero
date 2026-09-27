@@ -1,7 +1,7 @@
 import pytest
-from zer0code.tools.base import BaseTool, ToolResult
-from zer0code.tools.bash import BashTool
-from zer0code.tools.file_ops import ReadFileTool, WriteFileTool, GlobTool, GrepTool
+from truthzero.tools.base import BaseTool, ToolResult
+from truthzero.tools.bash import BashTool
+from truthzero.tools.file_ops import ReadFileTool, WriteFileTool, GlobTool, GrepTool
 
 @pytest.mark.asyncio
 async def test_bash_echo():

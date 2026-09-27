@@ -1,4 +1,4 @@
-name: zer0code-swarm
+name: truthzero-swarm
 on:
   schedule:
     - cron: '0 2 * * *'

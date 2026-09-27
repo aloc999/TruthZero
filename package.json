@@ -1,16 +1,16 @@
 {
-  "name": "zer0code",
+  "name": "truthzero",
   "version": "0.15.0",
-  "description": "ZER0CODE — Autonomous AI Coding Agent for Expert Penetration Testers",
+  "description": "TRUTHZERO — Autonomous AI Coding Agent for Expert Penetration Testers",
   "author": "aloc999",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aloc999/ZER0CODE.git"
+    "url": "https://github.com/aloc999/TRUTHZERO.git"
   },
-  "homepage": "https://github.com/aloc999/ZER0CODE",
+  "homepage": "https://github.com/aloc999/TRUTHZERO",
   "bugs": {
-    "url": "https://github.com/aloc999/ZER0CODE/issues"
+    "url": "https://github.com/aloc999/TRUTHZERO/issues"
   },
   "keywords": [
     "ai",
@@ -25,8 +25,8 @@
     "hacking"
   ],
   "bin": {
-    "zer0code": "bin/zer0code",
-    "z0": "bin/zer0code"
+    "truthzero": "bin/truthzero",
+    "tz": "bin/truthzero"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.js"
@@ -34,7 +34,7 @@
   "files": [
     "bin/",
     "scripts/",
-    "zer0code/",
+    "truthzero/",
     "requirements.txt",
     "pyproject.toml",
     "LICENSE",

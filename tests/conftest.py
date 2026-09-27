@@ -1,12 +1,12 @@
 import asyncio
 import inspect
 import pytest
-from zer0code.config import ZeroCodeConfig
+from truthzero.config import TruthZeroConfig
 
 
 @pytest.fixture
 def config():
-    return ZeroCodeConfig(provider="openai", model="gpt-4o", memory_enabled=False)
+    return TruthZeroConfig(provider="openai", model="gpt-4o", memory_enabled=False)
 
 
 @pytest.fixture

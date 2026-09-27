@@ -1,5 +1,5 @@
-// ZER0CODE Swarm VS Code extension (beta).
-// Runs `zer0code scan --swarm` in a terminal and opens the SARIF output.
+// TRUTHZERO Swarm VS Code extension (beta).
+// Runs `truthzero scan --swarm` in a terminal and opens the SARIF output.
 const vscode = require('vscode');
 const cp = require('child_process');
 
@@ -13,9 +13,9 @@ function runScan() {
   });
   input.then(t => {
     if (!t) return;
-    const term = vscode.window.createTerminal('zer0code-swarm');
+    const term = vscode.window.createTerminal('truthzero-swarm');
     term.show();
-    term.sendText(`zer0code scan "${t}" --scope "${t}" --swarm`);
+    term.sendText(`truthzero scan "${t}" --scope "${t}" --swarm`);
   });
 }
 
@@ -29,8 +29,8 @@ function showFindings() {
 
 function activate(context) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('zer0code.scan', runScan),
-    vscode.commands.registerCommand('zer0code.showFindings', showFindings)
+    vscode.commands.registerCommand('truthzero.scan', runScan),
+    vscode.commands.registerCommand('truthzero.showFindings', showFindings)
   );
 }
 

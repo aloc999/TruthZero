@@ -1,6 +1,6 @@
 import pytest
-from zer0code.memory.store import MemoryStore
-from zer0code.memory.loop_detector import LoopDetector
+from truthzero.memory.store import MemoryStore
+from truthzero.memory.loop_detector import LoopDetector
 
 @pytest.mark.asyncio
 async def test_memory_store_init(tmp_path):

@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for containerized ZER0CODE
+# Multi-stage Dockerfile for containerized TRUTHZERO
 # Pre-installs common pentesting tools for security workflows
 FROM python:3.12-slim AS base
 
@@ -14,4 +14,4 @@ COPY . .
 RUN pip install --no-cache-dir -e .
 
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["zer0code"]
+ENTRYPOINT ["truthzero"]

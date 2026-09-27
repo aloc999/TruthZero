@@ -27,7 +27,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Lint
-        run: ruff check zer0code/
+        run: ruff check truthzero/
 
       - name: Test
         run: pytest tests/ -v --tb=short

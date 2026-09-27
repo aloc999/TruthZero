@@ -2,8 +2,8 @@ import pytest
 
 textual = pytest.importorskip("textual")
 
-from zer0code.tui_app import (
-    TUI_PALETTES, tui_palette, build_tui_css, _st, ZeroCodeTUI,
+from truthzero.tui_app import (
+    TUI_PALETTES, tui_palette, build_tui_css, _st, TruthZeroTUI,
 )
 
 
@@ -19,10 +19,10 @@ def test_palettes():
 
 
 def test_css_build():
-    css = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, tui_palette("cyberpunk"))
+    css = build_tui_css(TruthZeroTUI._CSS_TEMPLATE, tui_palette("cyberpunk"))
     assert "#ff2a6d" in css
     assert "$primary" not in css and "$bg" not in css
-    css_h = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE, tui_palette("hacker"))
+    css_h = build_tui_css(TruthZeroTUI._CSS_TEMPLATE, tui_palette("hacker"))
     assert "#00ff41" in css_h
 
 
@@ -35,9 +35,9 @@ def test_st_helper():
 
 def test_app_takes_theme():
     from types import SimpleNamespace
-    app = ZeroCodeTUI(agent=None, config=SimpleNamespace(theme="cyberpunk"))
+    app = TruthZeroTUI(agent=None, config=SimpleNamespace(theme="cyberpunk"))
     assert app._tui_pal["primary"] == "#ff2a6d"
-    app2 = ZeroCodeTUI(agent=None, config=SimpleNamespace(theme="hacker"))
+    app2 = TruthZeroTUI(agent=None, config=SimpleNamespace(theme="hacker"))
     assert app2._tui_pal["primary"] == "#00ff41"
-    app3 = ZeroCodeTUI(agent=None, config=None)
+    app3 = TruthZeroTUI(agent=None, config=None)
     assert app3._tui_pal["primary"] == "#00ff41"

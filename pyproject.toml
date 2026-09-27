@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "zer0code"
+name = "truthzero"
 version = "0.15.0"
 description = "Autonomous AI Coding Agent for Expert Penetration Testers"
 readme = "README.md"
@@ -49,16 +49,16 @@ tui = [
 ]
 
 [project.scripts]
-zer0code = "zer0code.cli:main"
-z0 = "zer0code.cli:main"
+truthzero = "truthzero.cli:main"
+tz = "truthzero.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/aloc999/zer0code"
-Repository = "https://github.com/aloc999/zer0code"
-Issues = "https://github.com/aloc999/zer0code/issues"
+Homepage = "https://github.com/aloc999/TruthZero"
+Repository = "https://github.com/aloc999/TruthZero"
+Issues = "https://github.com/aloc999/TruthZero/issues"
 
 [tool.setuptools.packages.find]
-include = ["zer0code*"]
+include = ["truthzero*"]
 
 [tool.ruff]
 target-version = "py310"

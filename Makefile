@@ -10,11 +10,11 @@ test:
 	pytest tests/ -v
 
 lint:
-	ruff check zer0code/
-	ruff format --check zer0code/
+	ruff check truthzero/
+	ruff format --check truthzero/
 
 format:
-	ruff format zer0code/
+	ruff format truthzero/
 
 clean:
 	rm -rf build/ dist/ *.egg-info __pycache__
@@ -25,4 +25,4 @@ build:
 	python -m build
 
 run:
-	python -m zer0code
+	python -m truthzero

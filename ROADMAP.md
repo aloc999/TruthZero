@@ -1,4 +1,4 @@
-# ZER0CODE Roadmap
+# TRUTHZERO Roadmap
 
 Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 *alpha* = experimental, *planned* = future.
@@ -6,11 +6,11 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 ## Wave 1 — Swarm parity (this release)
 | Feature | Status | Notes |
 |---|---|---|
-| Sequential pipeline (RECON→ANALYSIS→EXPLOIT→REPORT) | **stable** | `zer0code/pipeline.py` |
-| Stigmergic swarm scheduler | **beta** | `zer0code/swarm/` — blackboard + pheromone + 4 specialists |
+| Sequential pipeline (RECON→ANALYSIS→EXPLOIT→REPORT) | **stable** | `truthzero/pipeline.py` |
+| Stigmergic swarm scheduler | **beta** | `truthzero/swarm/` — blackboard + pheromone + 4 specialists |
 | Pheromone decay per finding type | **beta** | `FINDING_HALF_LIVES`, PORT_OPEN hours / SESSION minutes |
 | ProjectDiscovery toolchain wrapper | **beta** | subfinder·httpx·nuclei·naabu·katana·dnsx·gau·nmap, scope-checked |
-| CVSS v3.1 scoring | **beta** | FIRST spec, `zer0code/scoring/cvss.py` |
+| CVSS v3.1 scoring | **beta** | FIRST spec, `truthzero/scoring/cvss.py` |
 | JEV FP filter | **beta** | `--jev`, fails open |
 | Adaptive attack-path scoring | **beta** | `--jev-adaptive`, graded pheromone |
 | Scope enforcement (tool + executor) | **stable** | defence in depth, fail closed |
@@ -20,18 +20,18 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Providers: together/gemini/lmstudio/orcarouter | **beta** | OpenAI-compatible + Claude/Ollama |
 | SARIF export | **beta** | `ReportGenerator.to_sarif/write_sarif`, CI-ready |
 | Dashboard | **alpha** | `web/index.html` stub, wiring in progress |
-| MCP serve | **beta** | `zer0code mcp serve` (stdio bridge Wave 2) |
+| MCP serve | **beta** | `truthzero mcp serve` (stdio bridge Wave 2) |
 
 ## Wave 2 (shipped in v0.10.0)
 | Feature | Status | Notes |
 |---|---|---|
 | Burp MCP bridge | **beta** | `burp_bridge` tool (history/repeater/scope via REST :1337) |
-| MCP stdio server | **beta** | `zer0code mcp serve` — 9 tools, Claude/Cursor-ready |
+| MCP stdio server | **beta** | `truthzero mcp serve` — 9 tools, Claude/Cursor-ready |
 | sqlmap adapter | **beta** | safe defaults, destructive flags blocked |
 | Metasploit adapter | **beta** | scanner/gather/check allowlist, no payloads |
 | ZAP adapter | **beta** | baseline + api-scan via zap-cli/Docker |
-| ASM diffing | **beta** | `zer0code asm diff`, new assets → blackboard |
-| CI gate | **stable** | `zer0code gate --sarif`, exit 2 on fail_on |
+| ASM diffing | **beta** | `truthzero asm diff`, new assets → blackboard |
+| CI gate | **stable** | `truthzero gate --sarif`, exit 2 on fail_on |
 | Postgres board backend | **beta** | `PostgresBoard`, decay in SQL, fails open |
 | VS Code extension | **beta** | `deploy/vscode/` |
 | GitHub Action + SARIF | **beta** | `deploy/github-action/` |
@@ -44,9 +44,9 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Self-correcting attacks | **beta** | `swarm/selfheal.py` — status-driven mutations + backoff |
 | Runtime reaction to discoveries | **beta** | `swarm/miner.py` — URLs/params/emails/UUIDs/secrets → board |
 | On-demand specialists | **beta** | `swarm/specialists.py` — auth-holder/param-fuzzer/chain-builder |
-| Vulnerable labs (docker) | **beta** | `zer0code/lab.py` — crapi/juice/vampi/dvga, cleanup-registered |
+| Vulnerable labs (docker) | **beta** | `truthzero/lab.py` — crapi/juice/vampi/dvga, cleanup-registered |
 | Memory-poisoning guard | **beta** | `memory/guard.py` — injection/quotas/controls |
-| Bench harness | **alpha** | `zer0code bench` local score; Cybench/AutoPenBench/CVE-Bench pending |
+| Bench harness | **alpha** | `truthzero bench` local score; Cybench/AutoPenBench/CVE-Bench pending |
 | Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
 | Green test suite | **stable** | 43 passed, 0 failed |
 
@@ -71,8 +71,8 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Feature | Status | Notes |
 |---|---|---|
 | Neon SVG hero banner (browser-verified) | **stable** | `banner/hero.svg`, README hero |
-| Live dashboard + HTTP API | **beta** | `zer0code/dashboard.py` — GET /, /api/findings, /api/sarif, POST /api/scan (403 OOS) |
-| Shared headless runner (CLI + API) | **stable** | `zer0code/headless.py`, boards persist to `~/.zer0code/boards/` |
+| Live dashboard + HTTP API | **beta** | `truthzero/dashboard.py` — GET /, /api/findings, /api/sarif, POST /api/scan (403 OOS) |
+| Shared headless runner (CLI + API) | **stable** | `truthzero/headless.py`, boards persist to `~/.truthzero/boards/` |
 
 ## v0.12 — Benchmarks + pgvector + Marketplace (shipped)
 | Feature | Status | Notes |

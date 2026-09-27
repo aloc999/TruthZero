@@ -3,8 +3,8 @@ import json
 import subprocess
 import sys
 
-from zer0code.asm import ASMSnapshot, CIGate
-from zer0code.scoring import cvss31_score
+from truthzero.asm import ASMSnapshot, CIGate
+from truthzero.scoring import cvss31_score
 
 
 def test_asm_diff(tmp_path):
@@ -33,7 +33,7 @@ def test_ci_gate():
 
 
 def test_adapters_registered():
-    from zer0code.tools import ALL_TOOLS
+    from truthzero.tools import ALL_TOOLS
     names = [t.name for t in ALL_TOOLS]
     assert "sqlmap_scan" in names
     assert "msf_run" in names
@@ -43,9 +43,9 @@ def test_adapters_registered():
 
 def test_adapters_fail_safe():
     """Missing binaries / destructive flags fail with clear errors, no crash."""
-    from zer0code.tools.sqlmap_tool import SqlmapTool
-    from zer0code.tools.metasploit_tool import MetasploitTool
-    from zer0code.tools.zap_tool import ZapTool
+    from truthzero.tools.sqlmap_tool import SqlmapTool
+    from truthzero.tools.metasploit_tool import MetasploitTool
+    from truthzero.tools.zap_tool import ZapTool
 
     async def go():
         r1 = await SqlmapTool().execute(
@@ -61,7 +61,7 @@ def test_adapters_fail_safe():
 
 
 def test_burp_bridge_offline():
-    from zer0code.tools.burp_bridge import BurpBridgeTool
+    from truthzero.tools.burp_bridge import BurpBridgeTool
     async def go():
         r = await BurpBridgeTool().execute(
             action="status", base_url="http://127.0.0.1:19999")
@@ -81,11 +81,11 @@ def test_mcp_server_stdio():
         json.dumps({"jsonrpc": "2.0", "id": 4, "method": "tools/call",
                     "params": {"name": "playbook_list", "arguments": {}}}),
     ]) + "\n"
-    p = subprocess.run([sys.executable, "-m", "zer0code.mcp_run"],
+    p = subprocess.run([sys.executable, "-m", "truthzero.mcp_run"],
                        input=reqs, capture_output=True, text=True, timeout=30)
     lines = [json.loads(ln) for ln in p.stdout.strip().splitlines() if ln.strip()]
     by_id = {ln.get("id"): ln for ln in lines}
-    assert by_id[1]["result"]["serverInfo"]["name"] == "zer0code"
+    assert by_id[1]["result"]["serverInfo"]["name"] == "truthzero"
     assert any(t["name"] == "blackboard_write" for t in by_id[2]["result"]["tools"])
     assert "10.0" in by_id[3]["result"]["content"][0]["text"]
     assert "bug-bounty" in by_id[4]["result"]["content"][0]["text"]
@@ -93,7 +93,7 @@ def test_mcp_server_stdio():
 
 def test_pgboard_fails_open():
     """No Postgres here → connect() False, memory board unaffected."""
-    from zer0code.swarm import PostgresBoard
+    from truthzero.swarm import PostgresBoard
     b = PostgresBoard("postgresql://u:p@127.0.0.1:19999/db")
     assert b.connect() is False
     assert b.error != ""
@@ -101,7 +101,7 @@ def test_pgboard_fails_open():
 
 def test_hashing_embed():
     import math
-    from zer0code.swarm import hashing_embed
+    from truthzero.swarm import hashing_embed
     v1 = hashing_embed("bola idor user_id swap", 64)
     v2 = hashing_embed("bola idor user_id swap", 64)
     assert v1 == v2  # deterministic
@@ -117,7 +117,7 @@ def test_hashing_embed():
 
 
 def test_pgboard_vector_no_conn():
-    from zer0code.swarm import PostgresBoard
+    from truthzero.swarm import PostgresBoard
     b = PostgresBoard("postgresql://u:p@127.0.0.1:19999/db")
     assert b.similar("xss") == []  # fail open, no crash
     try:

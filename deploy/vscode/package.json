@@ -1,18 +1,18 @@
 {
-  "name": "zer0code-swarm",
-  "displayName": "ZER0CODE Swarm",
+  "name": "truthzero-swarm",
+  "displayName": "TRUTHZERO Swarm",
   "description": "Autonomous pentest swarm: scan, playbooks, SARIF findings (beta)",
   "version": "0.15.0",
   "publisher": "aloc999",
   "license": "MIT",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
-  "activationEvents": ["onCommand:zer0code.scan", "onCommand:zer0code.showFindings"],
+  "activationEvents": ["onCommand:truthzero.scan", "onCommand:truthzero.showFindings"],
   "main": "./extension.js",
   "contributes": {
     "commands": [
-      { "command": "zer0code.scan", "title": "ZER0CODE: Swarm Scan Target" },
-      { "command": "zer0code.showFindings", "title": "ZER0CODE: Show Findings" }
+      { "command": "truthzero.scan", "title": "TRUTHZERO: Swarm Scan Target" },
+      { "command": "truthzero.showFindings", "title": "TRUTHZERO: Show Findings" }
     ]
   }
 }

@@ -1,25 +1,25 @@
 import pytest
 import json
-from zer0code.config import ZeroCodeConfig
-from zer0code.validation import ConfigValidator, ConfigValidationError
+from truthzero.config import TruthZeroConfig
+from truthzero.validation import ConfigValidator, ConfigValidationError
 
 def test_default_config():
-    config = ZeroCodeConfig()
+    config = TruthZeroConfig()
     assert config.provider == "openai"
     assert config.model == "gpt-4o"
     assert config.memory_enabled is True
 
 def test_config_save_load(tmp_path):
-    from zer0code.config import CONFIG_DIR, CONFIG_FILE
-    import zer0code.config as cfg_mod
+    from truthzero.config import CONFIG_DIR, CONFIG_FILE
+    import truthzero.config as cfg_mod
     old_dir = cfg_mod.CONFIG_DIR
     old_file = cfg_mod.CONFIG_FILE
     cfg_mod.CONFIG_DIR = tmp_path
     cfg_mod.CONFIG_FILE = tmp_path / "config.json"
     try:
-        config = ZeroCodeConfig(provider="deepseek", model="deepseek-v4-pro")
+        config = TruthZeroConfig(provider="deepseek", model="deepseek-v4-pro")
         config.save()
-        loaded = ZeroCodeConfig.load()
+        loaded = TruthZeroConfig.load()
         assert loaded.provider == "deepseek"
         assert loaded.model == "deepseek-v4-pro"
     finally:
@@ -27,7 +27,7 @@ def test_config_save_load(tmp_path):
         cfg_mod.CONFIG_FILE = old_file
 
 def test_provider_config():
-    config = ZeroCodeConfig(provider="deepseek")
+    config = TruthZeroConfig(provider="deepseek")
     pc = config.get_provider_config()
     assert pc["provider"] == "deepseek"
     assert "deepseek" in pc["base_url"]
@@ -58,7 +58,7 @@ def test_validation_all_providers():
 
 
 def test_glm_provider():
-    from zer0code.providers import get_provider
+    from truthzero.providers import get_provider
     prov = get_provider("glm")
     assert prov.base_url == "https://open.bigmodel.cn/api/paas/v4"
     assert prov.default_model == "glm-4.6"
@@ -66,7 +66,7 @@ def test_glm_provider():
 
 
 def test_cyberpunk_theme_registered():
-    from zer0code.ui.themes import THEMES
+    from truthzero.ui.themes import THEMES
     assert "cyberpunk" in THEMES
     assert ConfigValidator.validate({"theme": "cyberpunk"}) == []
     assert THEMES["cyberpunk"].prompt_symbol == "◢"

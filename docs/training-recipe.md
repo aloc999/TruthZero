@@ -1,6 +1,6 @@
 # Training recipe — offensive model fine-tune (Pentest-R1 style)
 
-Goal: a security-tuned open model that reasons well inside the ZER0CODE
+Goal: a security-tuned open model that reasons well inside the TRUTHZERO
 harness (toolformer behaviour, not closed weights — recipe only).
 
 ## Data
@@ -15,10 +15,10 @@ harness (toolformer behaviour, not closed weights — recipe only).
    Base: Qwen3 / DeepSeek / GLM coding builds with native function calling.
 2. **RL (R1-style)**: reward = confirmed finding (1.0) + evidence quality
    (0.3) − FP pursuit (−0.5) − out-of-scope attempt (−1.0, hard).
-   Environment = labs (`zer0code lab up crapi|juice|vampi|dvga`) + bench harness.
+   Environment = labs (`truthzero lab up crapi|juice|vampi|dvga`) + bench harness.
 3. **Guard**: mix in MemoryGuard-blocked lessons as refusal/ignore demos so
    the model treats tool output as data, never instructions.
 
 ## Eval
-`zer0code bench` (local) → Cybench / AutoPenBench / CVE-Bench when wired.
+`truthzero bench` (local) → Cybench / AutoPenBench / CVE-Bench when wired.
 Ship numbers in ROADMAP before claiming anything.
