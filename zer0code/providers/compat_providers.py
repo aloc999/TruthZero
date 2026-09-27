@@ -1,4 +1,4 @@
-"""OpenAI-compatible providers: Together AI, Gemini, LM Studio, OrcaRouter.
+"""OpenAI-compatible providers: Together AI, Gemini, LM Studio, OrcaRouter, GLM.
 
 We're the harness, not the model — any Chat-Completions endpoint with
 native tool/function calling works. Together AI is first-class (endpoint
@@ -89,3 +89,28 @@ class OrcaRouterProvider(OpenAIProvider):
     def __init__(self, model: str = "", api_key: str = "", base_url: str = ""):
         super().__init__(model, api_key, base_url)
         self.base_url = base_url or "https://api.orcarouter.ai/v1"
+
+
+class GlmProvider(OpenAIProvider):
+    """Zhipu Z.AI GLM direct (OpenAI Chat Completions compat).
+
+    Endpoint + key format per Zhipu docs: base
+    https://open.bigmodel.cn/api/paas/v4, key ZHIPU_API_KEY
+    (Coding Plan: https://api.z.ai/api/coding/paas/v4 — pass as base_url).
+    """
+
+    @property
+    def default_model(self) -> str:
+        return "glm-4.6"
+
+    @property
+    def name(self) -> str:
+        return "glm"
+
+    @property
+    def available_models(self) -> list[str]:
+        return ["glm-4.6", "glm-4.5", "glm-4.7", "glm-5", "glm-5.1"]
+
+    def __init__(self, model: str = "", api_key: str = "", base_url: str = ""):
+        super().__init__(model, api_key, base_url)
+        self.base_url = base_url or "https://open.bigmodel.cn/api/paas/v4"

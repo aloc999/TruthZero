@@ -116,6 +116,7 @@ class SwarmScheduler:
         target: str,
         agent_runner: Callable[[SwarmAgentSpec, str, Blackboard], Any],
         budget_s: float = 0,
+        on_event: Callable[[int, dict, Blackboard], None] | None = None,
     ) -> SwarmResult:
         started = time.time()
         if not self._in_scope(target):
@@ -159,6 +160,11 @@ class SwarmScheduler:
                 fired[spec.name] = fired.get(spec.name, 0) + 1
             self.board.prune_stale()
             rounds = round_no + 1
+            if on_event is not None:
+                try:
+                    on_event(round_no, dict(fired), self.board)
+                except Exception:
+                    pass
             # emergence stop: nothing hot and no new findings this round
             if sum(results) == 0 and not self.board.hot():
                 break

@@ -173,3 +173,22 @@ async def test_model_picker_select_and_cancel():
         await pilot.press("escape")
         ib = app.query_one("#input-box")
         assert ib.outer_size.height == 3  # compact chat box
+
+
+@pytest.mark.asyncio
+async def test_escape_closes_panel_and_refocuses():
+    from zer0code.tui_app import build_tui_css, tui_palette
+    from types import SimpleNamespace
+
+    cfg = SimpleNamespace(provider="openai", model="m", theme="hacker",
+                          memory_enabled=False)
+    ZeroCodeTUI.CSS = build_tui_css(ZeroCodeTUI._CSS_TEMPLATE,
+                                    tui_palette("hacker"))
+    app = ZeroCodeTUI(agent=None, config=cfg)
+    async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.press("ctrl+b")  # open side panel
+        await pilot.pause(0.3)
+        assert app.show_panel is True
+        await pilot.press("escape")  # ESC closes panel
+        await pilot.pause(0.3)
+        assert app.show_panel is False

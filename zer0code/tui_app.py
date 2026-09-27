@@ -151,6 +151,10 @@ if HAS_TEXTUAL:
     class PickerScreen(ModalScreen):
         """Opencode-style picker: ↑/↓ + enter to pick, esc cancels."""
 
+        BINDINGS = [
+            Binding("escape", "dismiss_picker", "Cancel", show=False),
+        ]
+
         def __init__(self, title: str, options: list[str]):
             super().__init__()
             self._title = title
@@ -169,6 +173,9 @@ if HAS_TEXTUAL:
         def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
             idx = int(event.option.id.split("-")[1])
             self.dismiss(self._options[idx])
+
+        def action_dismiss_picker(self) -> None:
+            self.dismiss(None)
 
     class ZeroCodeTUI(App):
         TITLE = "ZER0CODE"
@@ -284,6 +291,7 @@ if HAS_TEXTUAL:
             Binding("ctrl+f", "search_conv", "Search", show=True),
             Binding("ctrl+s", "toggle_scroll", "Scroll", show=False),
             Binding("ctrl+y", "copy_last", "Copy", show=True),
+            Binding("escape", "escape_context", "Esc", show=False),
         ]
 
         show_panel = reactive(False)
@@ -991,9 +999,41 @@ if HAS_TEXTUAL:
                             jev = True
                     if not bad:
                         conv.write(Text(f"  Hunting {target} [{mode}]…", style=_st(pal, "accent")))
+                        from textual.widgets import RichLog as _RL
+                        try:
+                            _side = self.query_one("#side-panel", _RL)
+                            _side.clear()
+                            if not self.show_panel:
+                                self.show_panel = True
+                                _side.add_class("visible")
+                        except Exception:
+                            _side = None
+
+                        def _progress(rno, fired, board, _side=_side, _pal=pal):
+                            if _side is None:
+                                return
+                            try:
+                                total = len(board.all())
+                                confirmed = sum(1 for f in board.all()
+                                                if f.ftype == "VULN_CONFIRMED")
+                                _side.clear()
+                                _side.write(Text(f"  NOW ▸ round {rno + 1}: {total} findings ({confirmed} confirmed)", style=_st(_pal, "primary")))
+                                pills = " → ".join(
+                                    f"{'✓' if fired.get(a) else '·'}{a}"
+                                    for a in ("recon", "classify", "exploit", "report"))
+                                _side.write(Text(f"  {pills}", style="dim"))
+                                sev = board.summary().get("by_severity", {})
+                                _side.write(Text("  " + " ".join(
+                                    f"{k}:{sev.get(k, 0)}" for k in ("critical", "high", "medium", "low", "info")), style="dim"))
+                                for f in board.all()[-4:]:
+                                    _side.write(Text(f"  ● [{f.severity}] {f.title[:60]}", style="dim"))
+                            except Exception:
+                                pass
+
                         try:
                             result, board_file = await run_headless_scan(
-                                target, scope=scope, rounds=rounds, mode=mode, jev=jev)
+                                target, scope=scope, rounds=rounds, mode=mode, jev=jev,
+                                on_event=_progress)
                             conv.write(Text(f"  Done: {result.rounds} rounds, {result.findings_total} findings, "
                                             f"{result.confirmed} confirmed ({result.stopped_reason})", style=_st(pal, "primary")))
                             conv.write(Text(f"  Board: {board_file}", style="dim"))
@@ -1070,6 +1110,20 @@ if HAS_TEXTUAL:
                 panel.add_class("visible")
             else:
                 panel.remove_class("visible")
+
+        def action_escape_context(self) -> None:
+            """ESC: close side panel if open, else refocus the input."""
+            try:
+                if self.show_panel:
+                    self.show_panel = False
+                    self.query_one("#side-panel").remove_class("visible")
+                    return
+            except Exception:
+                pass
+            try:
+                self.query_one("#user-input", Input).focus()
+            except Exception:
+                pass
 
         def action_clear_conv(self) -> None:
             conv = self.query_one("#conversation", RichLog)

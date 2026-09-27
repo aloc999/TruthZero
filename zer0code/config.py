@@ -67,6 +67,8 @@ class ZeroCodeConfig:
             return os.environ.get("ANTHROPIC_API_KEY")
         elif self.provider == "deepseek":
             return os.environ.get("DEEPSEEK_API_KEY")
+        elif self.provider == "glm":
+            return os.environ.get("ZHIPU_API_KEY", os.environ.get("ZHIPUAI_API_KEY", ""))
         elif self.provider in ("together", "gemini", "orcarouter", "lmstudio"):
             return os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY",
                    os.environ.get("TOGETHER_API_KEY",
@@ -138,6 +140,10 @@ class ZeroCodeConfig:
         elif self.provider == "lmstudio":
             base["api_key"] = "lm-studio"
             base["base_url"] = self.orchestrator_base_url or "http://localhost:1234/v1"
+        elif self.provider == "glm":
+            base["api_key"] = os.environ.get("ZHIPU_API_KEY",
+                              os.environ.get("ZHIPUAI_API_KEY", ""))
+            base["base_url"] = self.orchestrator_base_url or "https://open.bigmodel.cn/api/paas/v4"
         elif self.provider == "orcarouter":
             base["api_key"] = os.environ.get("PENTESTSWARM_ORCHESTRATOR_API_KEY", "")
             base["base_url"] = self.orchestrator_base_url or "https://api.orcarouter.ai/v1"

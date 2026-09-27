@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 
 VALID_PROVIDERS = {"openai", "anthropic", "deepseek", "ollama",
-                   "together", "gemini", "lmstudio", "orcarouter"}
+                   "together", "gemini", "lmstudio", "orcarouter", "glm"}
 VALID_THEMES = {"hacker", "dark", "minimal", "cyberpunk"}
 
 

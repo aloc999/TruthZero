@@ -5,6 +5,7 @@ from zer0code.providers.ollama_provider import OllamaProvider
 from zer0code.providers.deepseek_provider import DeepSeekProvider
 from zer0code.providers.compat_providers import (
     TogetherProvider, GeminiProvider, LMStudioProvider, OrcaRouterProvider,
+    GlmProvider,
 )
 
 PROVIDERS = {
@@ -16,6 +17,7 @@ PROVIDERS = {
     "gemini": GeminiProvider,
     "lmstudio": LMStudioProvider,
     "orcarouter": OrcaRouterProvider,
+    "glm": GlmProvider,
 }
 
 

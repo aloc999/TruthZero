@@ -53,8 +53,16 @@ def test_sanitize():
 
 def test_validation_all_providers():
     for p in ("openai", "anthropic", "deepseek", "ollama",
-              "together", "gemini", "lmstudio", "orcarouter"):
+              "together", "gemini", "lmstudio", "orcarouter", "glm"):
         assert ConfigValidator.validate({"provider": p}) == [], p
+
+
+def test_glm_provider():
+    from zer0code.providers import get_provider
+    prov = get_provider("glm")
+    assert prov.base_url == "https://open.bigmodel.cn/api/paas/v4"
+    assert prov.default_model == "glm-4.6"
+    assert "glm-4.6" in prov.available_models
 
 
 def test_cyberpunk_theme_registered():

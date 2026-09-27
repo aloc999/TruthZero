@@ -6,7 +6,7 @@
 
 *`>> autonomous AI pentest swarm // licensed runners only <<`*
 
-[![version](https://img.shields.io/badge/version-v0.14.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
+[![version](https://img.shields.io/badge/version-v0.15.0-ff2a6d.svg)](https://github.com/aloc999/ZER0CODE)
 [![tests](https://img.shields.io/badge/tests-57_passing-00f0ff.svg)](https://github.com/aloc999/ZER0CODE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-7b2ff7.svg)](https://www.python.org/downloads/)
 [![npm](https://img.shields.io/badge/npm-zer0code-red.svg)](https://www.npmjs.com/package/zer0code)
@@ -118,7 +118,7 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 | Self-healing requests | ✅ status-driven mutations (401/403/415/429/5xx) |
 | Response mining → emergent BOLA | ✅ one leak becomes cross-endpoint probes |
 | Playbooks / chains | 5 YAML playbooks / 5 CVE-tied chains |
-| Providers | OpenAI/Anthropic/DeepSeek/Together/Gemini/Ollama/LMStudio/OrcaRouter |
+| Providers | OpenAI/Anthropic/DeepSeek/Together/Gemini/GLM/Ollama/LMStudio/OrcaRouter |
 | Labs | docker: crapi/juice/vampi/dvga, teardown on exit |
 | Benchmarks | local mini-suite 5/5 (harness-local, honest label) |
 | MCP | client + stdio server for Claude/Cursor |
@@ -164,6 +164,7 @@ We're the harness, not the model. One key drives the whole swarm:
 | OpenAI-compatible | `openai` | key + vendor `/v1` URL |
 | Gemini | `gemini` | `GEMINI_API_KEY` |
 | DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` |
+| GLM (Zhipu Z.AI direct) | `glm` | `ZHIPU_API_KEY` (Coding Plan: base-url override) |
 | OrcaRouter | `orcarouter` | `PENTESTSWARM_ORCHESTRATOR_API_KEY` |
 | Ollama (100% local) | `ollama` | pull a model, no key |
 | LM Studio (100% local) | `lmstudio` | load model, enable server |
@@ -220,12 +221,13 @@ zer0code sessions / memory / doctor / install-tools
 
 **Config** (`~/.zer0code/config.json`) — provider, model, theme (`hacker`/`dark`/`minimal`/`cyberpunk`, switch live with `/theme cyberpunk`), `strict_llm`, `prompt_cache`, `jev_enabled`, `jev_adaptive`, `swarm_rounds`, `swarm_concurrent`, token budget, proxy, MCP servers, wordlists. Invalid keys fail validation on load.
 
-**Cortex details** — Hermes memory (TF-IDF + episodic + strategies + decay + auto-reflection + poison guard), risk-tiered permissions (low auto / medium contextual / high confirm; `rm -rf`-class patterns always confirm), SQLite sessions (`--resume`), project context files (`.zer0code.md`, `AGENTS.md`, `CLAUDE.md`…), 15 pentest skills, 15 prompt templates, file rollback, conversation branching, desktop notifications, LSP diagnostics, full-screen TUI (`zer0code tui`: 4 neon themes live via `/theme` or Ctrl+T, `/scan` hunts + `/lab` + `/bench` in-app, model/provider pickers via `/model` `/provider` or Ctrl+O, compact 3-row chat box), HTTP API on `:3117`.
+**Cortex details** — Hermes memory (TF-IDF + episodic + strategies + decay + auto-reflection + poison guard), risk-tiered permissions (low auto / medium contextual / high confirm; `rm -rf`-class patterns always confirm), SQLite sessions (`--resume`), project context files (`.zer0code.md`, `AGENTS.md`, `CLAUDE.md`…), 15 pentest skills, 15 prompt templates, file rollback, conversation branching, desktop notifications, LSP diagnostics, full-screen TUI (`zer0code tui`: 4 neon themes live via `/theme` or Ctrl+T, `/scan` hunts with live NOW/counters panel + `/lab` + `/bench` in-app, model/provider pickers via `/model` `/provider` or Ctrl+O, Esc closes panel/picker, compact 3-row chat box), HTTP API on `:3117`.
 
 **Architecture** — `agent.py` (loop) · `swarm/` (board/agents/scheduler/miner/selfheal/specialists/toolchain/pgboard) · `scoring/` (cvss/jev/adaptive) · `tools/` (35+) · `memory/` · `providers/` (8) · `mcp/` (client + stdio server) · `cli.py` · `lab.py` · `bench.py` · `asm.py` · `playbooks/`+`chains/`+`benchmarks/` · `deploy/` (vscode + github-action) · `web/`.
 
 // CHANGELOG — how we got here
 
+- **v0.15 Campaign Watch** — ESC fixed, GLM provider, scheduler progress hook, TUI live NOW/counters panel
 - **v0.14 Second Opinion** — real TypeSafe Jev backend (opt-in, AND-gated, severity-gated), doctor Jev status
 - **v0.13 Live Grid** — neon SVG hero banner, live dashboard + HTTP API (`serve` for real: findings/SARIF/scan, scope fail-closed), shared headless runner
 - **v0.12** — benchmark suites wired (mini 5/5 + RESULTS.md), pgvector embeddings, Marketplace packaging + release pipeline
@@ -258,6 +260,6 @@ MIT — see [LICENSE](LICENSE).
 
 *"In the sprawl of zeros and ones, we are the zero that makes everything possible."*
 
-`▓ NIGHT CITY GRID // ZER0CODE v0.14 // STAY CHROME ▓`
+`▓ NIGHT CITY GRID // ZER0CODE v0.15 // STAY CHROME ▓`
 
 </div>

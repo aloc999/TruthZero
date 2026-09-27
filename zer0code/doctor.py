@@ -42,6 +42,7 @@ class Doctor:
             "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
             "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
             "DEEPSEEK_API_KEY": os.environ.get("DEEPSEEK_API_KEY"),
+            "ZHIPU_API_KEY": os.environ.get("ZHIPU_API_KEY", os.environ.get("ZHIPUAI_API_KEY")),
             "TYPESAFE_API_KEY": os.environ.get("TYPESAFE_API_KEY"),
         }
         found = [k for k, v in keys.items() if v]

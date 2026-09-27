@@ -50,6 +50,14 @@ Honesty labels: *stable* = shipped + tested, *beta* = works, rough edges,
 | Training recipe | **alpha** | `docs/training-recipe.md` (SFT+RL recipe, no weights) |
 | Green test suite | **stable** | 43 passed, 0 failed |
 
+## v0.15 — Campaign Watch (shipped)
+| Feature | Status | Notes |
+|---|---|---|
+| ESC works (picker dismiss + panel close + input refocus) | **stable** | pilot-tested |
+| GLM provider (Zhipu direct, OpenAI-compat) | **beta** | `ZHIPU_API_KEY`, coding-plan base-url override |
+| Scheduler on_event hook (per-round progress) | **stable** | swarm + sequential modes |
+| TUI live campaign panel (NOW ▸ / pills / severity / findings) | **beta** | mirrors live-campaign TUI functionally |
+
 ## v0.14 — Real Jev (shipped)
 | Feature | Status | Notes |
 |---|---|---|

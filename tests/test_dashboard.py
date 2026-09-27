@@ -57,6 +57,23 @@ def test_headless_sequential_and_jev():
     assert "+jev(" in result2.stopped_reason
 
 
+def test_headless_on_event():
+    calls = []
+    result, _ = asyncio.run(
+        run_headless_scan("example.com", scope="example.com", rounds=2,
+                          persist=False,
+                          on_event=lambda rno, fired, board: calls.append(
+                              (rno, sorted(fired), len(board.all())))))
+    assert len(calls) == result.rounds == 2
+    assert all(n >= 0 for _, _, n in calls)
+    # sequential fires once too
+    calls2 = []
+    asyncio.run(run_headless_scan("example.com", scope="example.com",
+                                  mode="sequential", persist=False,
+                                  on_event=lambda rno, fired, board: calls2.append(rno)))
+    assert calls2 == [0]
+
+
 def test_scan_strict_exit_code():
     from click.testing import CliRunner
     from zer0code.cli import cli

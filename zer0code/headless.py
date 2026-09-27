@@ -47,7 +47,8 @@ async def run_headless_scan(target: str, scope: str = "", rounds: int = 6,
                             budget_s: float = 0, persist: bool = True,
                             adaptive: bool = False,
                             mode: str = "swarm", jev: bool = False,
-                            jev_backend: str = "auto") -> tuple:
+                            jev_backend: str = "auto",
+                            on_event=None) -> tuple:
     """Returns (SwarmResult, board_file). Raises PermissionError if out of scope.
 
     mode: 'swarm' (emergent loop) or 'sequential' (one fixed
@@ -83,10 +84,16 @@ async def run_headless_scan(target: str, scope: str = "", rounds: int = 6,
                                            if f.ftype == "VULN_CONFIRMED"),
                              duration_s=time.time() - started,
                              stopped_reason="sequential")
+        if on_event is not None:
+            try:
+                on_event(0, dict(fired), board)
+            except Exception:
+                pass
     else:
         sched = SwarmScheduler(board, max_rounds=rounds,
                                scope_checker=sm.is_in_scope)
-        result = await sched.run(target, runner, budget_s=budget_s)
+        result = await sched.run(target, runner, budget_s=budget_s,
+                                 on_event=on_event)
     dropped = 0
     if jev:
         from zer0code.scoring import JevFilter
