@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 VALID_PROVIDERS = {"openai", "anthropic", "deepseek", "ollama",
                    "together", "gemini", "lmstudio", "orcarouter"}
-VALID_THEMES = {"hacker", "dark", "minimal"}
+VALID_THEMES = {"hacker", "dark", "minimal", "cyberpunk"}
 
 
 class ConfigValidationError(Exception):

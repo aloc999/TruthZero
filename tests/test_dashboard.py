@@ -110,6 +110,8 @@ def test_dashboard_api():
         # index
         code, body = _get(port, "/")
         assert code == 200 and ("ZER0CODE" in body or "swarm" in body.lower())
+        assert "topology" in body.lower() or "topo" in body
+        assert "cyberpunk" in body.lower() or "00f0ff" in body
 
         # unknown → 404
         code, _ = _get(port, "/nope")

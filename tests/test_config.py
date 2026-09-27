@@ -56,6 +56,13 @@ def test_validation_all_providers():
               "together", "gemini", "lmstudio", "orcarouter"):
         assert ConfigValidator.validate({"provider": p}) == [], p
 
+
+def test_cyberpunk_theme_registered():
+    from zer0code.ui.themes import THEMES
+    assert "cyberpunk" in THEMES
+    assert ConfigValidator.validate({"theme": "cyberpunk"}) == []
+    assert THEMES["cyberpunk"].prompt_symbol == "◢"
+
 def test_validation_swarm_keys():
     good = {"strict_llm": True, "prompt_cache": False, "jev_enabled": True,
             "jev_adaptive": False, "swarm_rounds": 6, "swarm_concurrent": 4,

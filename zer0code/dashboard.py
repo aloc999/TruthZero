@@ -100,7 +100,8 @@ class _Handler(BaseHTTPRequestHandler):
             from zer0code.headless import run_headless_scan
             result, board_file = asyncio.run(run_headless_scan(
                 target, scope=str(data.get("scope", "") or target),
-                rounds=int(data.get("rounds", 6) or 6)))
+                rounds=int(data.get("rounds", 6) or 6),
+                mode=str(data.get("mode", "swarm") or "swarm")))
         except PermissionError as e:
             self._json({"error": str(e)}, 403)
             return

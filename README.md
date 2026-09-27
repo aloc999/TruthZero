@@ -74,6 +74,8 @@ zer0code bench --suite mini                # score the pipeline: 5/5 expected
 | VS Code extension / GitHub Action | **beta** | `deploy/` |
 | Live dashboard + HTTP API (`/api/findings`, `/api/sarif`, `POST /api/scan`) | **beta** | `zer0code serve --port 7777` |
 
+<img src="banner/dashboard.png" alt="ZER0CODE neon-grid dashboard: swarm topology, severity bars, scan console" width="100%">
+
 ```
 // ═══════════════════ HOW THE SWARM HUNTS ═══════════════════
 ```
@@ -216,7 +218,7 @@ zer0code sessions / memory / doctor / install-tools
 
 **Interactive slash commands** — `/help /tools /clear /memory /config /model /provider /theme /skill /session /compact /cost /status /persona /template /proxy /branch /export /undo /plugin /serve /budget /creds /lsp /scope /workflow /exit` (tab-completion built in).
 
-**Config** (`~/.zer0code/config.json`) — provider, model, theme (`hacker`/`dark`/`minimal`), `strict_llm`, `prompt_cache`, `jev_enabled`, `jev_adaptive`, `swarm_rounds`, `swarm_concurrent`, token budget, proxy, MCP servers, wordlists. Invalid keys fail validation on load.
+**Config** (`~/.zer0code/config.json`) — provider, model, theme (`hacker`/`dark`/`minimal`/`cyberpunk`, switch live with `/theme cyberpunk`), `strict_llm`, `prompt_cache`, `jev_enabled`, `jev_adaptive`, `swarm_rounds`, `swarm_concurrent`, token budget, proxy, MCP servers, wordlists. Invalid keys fail validation on load.
 
 **Cortex details** — Hermes memory (TF-IDF + episodic + strategies + decay + auto-reflection + poison guard), risk-tiered permissions (low auto / medium contextual / high confirm; `rm -rf`-class patterns always confirm), SQLite sessions (`--resume`), project context files (`.zer0code.md`, `AGENTS.md`, `CLAUDE.md`…), 15 pentest skills, 15 prompt templates, file rollback, conversation branching, desktop notifications, LSP diagnostics, TUI mode, HTTP API on `:3117`.
 
