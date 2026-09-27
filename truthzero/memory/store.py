@@ -25,9 +25,25 @@ STOPWORDS = {
 
 
 class MemoryStore:
-    def __init__(self, db_path: str = "~/.truthzero/memory.db"):
+    def __init__(self, db_path: str = "~/.truthzero/memory.db", guard=None):
         self.db_path = os.path.expanduser(db_path)
         self._db = None
+        if guard is None:
+            from truthzero.memory.guard import MemoryGuard
+            guard = MemoryGuard()
+        self.guard = guard
+        self.guard_rejections = 0
+
+    def _screen(self, lesson: str, source: str = "session") -> bool:
+        """Poisoning guard: drop injection/oversize/quota lessons. Fail closed for store."""
+        try:
+            allowed, _ = self.guard.check(lesson, source)
+        except Exception:
+            return True  # guard broken → fail open, never lose real lessons
+        if not allowed:
+            self.guard_rejections += 1
+            return False
+        return True
 
     async def init(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -122,6 +138,8 @@ class MemoryStore:
         return scores
 
     async def add_mistake(self, context: str, error: str, lesson: str, category: str):
+        if not self._screen(f"{context}\n{error}\n{lesson}", source=category):
+            return
         await self._db.execute(
             "INSERT INTO mistakes (timestamp, context, error, lesson, category) VALUES (?, ?, ?, ?, ?)",
             (time.time(), context, error, lesson, category),
@@ -129,6 +147,8 @@ class MemoryStore:
         await self._db.commit()
 
     async def add_success(self, context: str, approach: str, outcome: str, category: str):
+        if not self._screen(f"{context}\n{approach}\n{outcome}", source=category):
+            return
         await self._db.execute(
             "INSERT INTO successes (timestamp, context, approach, outcome, category) VALUES (?, ?, ?, ?, ?)",
             (time.time(), context, approach, outcome, category),
@@ -154,6 +174,8 @@ class MemoryStore:
         await self._db.commit()
 
     async def add_knowledge(self, key: str, value: str, source: str, category: str):
+        if not self._screen(f"{key}\n{value}", source=source):
+            return
         await self._db.execute(
             "INSERT INTO knowledge (key, value, source, timestamp, category) VALUES (?, ?, ?, ?, ?)",
             (key, value, source, time.time(), category),
